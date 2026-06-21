@@ -1,0 +1,73 @@
+# Página de error 404 personalizada
+
+## Propósito
+
+`pages/404.js` se renderiza automáticamente cuando una ruta no coincide con ninguna página. Es una página estática por defecto (no tiene datos de petición), pero puede usar `getStaticProps` para obtener datos en tiempo de compilación y generar una página de "no encontrado" más rica.
+
+## Comportamiento predeterminado
+
+- Si no existe `pages/404.js`, Next.js muestra una página de 404 interna (minimalista).
+- Si existe, tiene prioridad sobre `_error` para el código 404.
+
+## Creación
+
+```js
+export default function Custom404() {
+  return <h1>404 - Página no encontrada</h1>
+}
+```
+
+Esta página es estática (se genera en build) y no recibe ninguna prop relacionada con la ruta solicitada.
+
+## Uso de `getStaticProps`
+
+Para contenido dinámico en el 404 (por ejemplo, sugerencias de artículos populares), se puede usar `getStaticProps`:
+
+```js
+export async function getStaticProps() {
+  const suggestions = await getPopularPosts()
+  return { props: { suggestions } }
+}
+
+export default function Custom404({ suggestions }) {
+  return (
+    <div>
+      <h1>404</h1>
+      <p>Tal vez te interese:</p>
+      <ul>
+        {suggestions.map(post => <li key={post.slug}>{post.title}</li>)}
+      </ul>
+    </div>
+  )
+}
+```
+
+> [!NOTE]
+> **Nota**: `getStaticProps` en `404.js` funciona, pero la página sigue siendo estática; no se regenera con ISR porque Next.js no permite `revalidate` en 404 (se ignoraría). Si se necesita revalidación, mejor usar una página normal que muestre el 404 mediante lógica condicional.
+
+## `getServerSideProps` en `404.js`
+
+No se puede usar `getServerSideProps` en la página 404 porque el código de estado 404 ya se envió antes de ejecutarse `getServerSideProps`. Next.js no permite SSR para 404. Si se intenta, se mostrará un error en producción.
+
+## ¿Cuándo se muestra `404.js`?
+
+- Cuando el usuario navega a una ruta no definida y la respuesta es 404.
+- Cuando desde `getServerSideProps` o `getStaticProps` se devuelve `{ notFound: true }`.
+- Cuando desde una API route se devuelve `res.status(404).end()` y luego se renderiza la página? No, la API route es independiente; el 404 de API no muestra la página.
+
+## Integración con `_error`
+
+Si se define `_error` y no `404.js`, entonces `_error` con `statusCode=404` se renderizará para rutas no encontradas (tanto en servidor como cliente). Pero si ambos existen, `404.js` tiene prioridad.
+
+## TypeScript
+
+```ts
+const Custom404 = () => <h1>404</h1>
+export default Custom404
+```
+
+No necesita tipado especial.
+
+## Patrón avanzado: Captura de rutas mal escritas con redirección
+
+Como no se puede usar `getServerSideProps`, se puede implementar lógica de redirección solo en el cliente con un `useEffect` y `router.push`, pero no es SEO‑friendly. Lo óptimo es usar middleware o rewrites si se necesita lógica de servidor.

@@ -1,0 +1,63 @@
+# Página de error de servidor personalizada
+
+## Propósito
+
+`pages/500.js` es la página que se muestra cuando ocurre un error interno del servidor (código 500) durante el renderizado de una página o en una API route. Al igual que `404.js`, es una página especial que permite personalizar la interfaz de error del servidor.
+
+## Creación y uso
+
+```js
+export default function Custom500() {
+  return <h1>500 - Error interno del servidor</h1>
+}
+```
+
+También es estática; no se puede usar `getServerSideProps` porque en ese punto el servidor ya ha fallado. Se puede usar `getStaticProps` para obtener contenido estático (ej. un mensaje genérico con enlaces).
+
+## Comportamiento
+
+- En producción, si el servidor lanza un error (por ejemplo, una excepción en `getServerSideProps` o en el componente), Next.js mostrará `500.js`.
+- Si existe `_error` y no `500.js`, entonces `_error` con `statusCode=500` se usará.
+- Si existen ambos, `500.js` tiene prioridad.
+
+## ¿Cuándo se activa?
+
+- Error en `getServerSideProps` o `getStaticProps` (en desarrollo se muestra el stack trace; en producción, la página 500).
+- Error en un API route que no sea manejado.
+- Error de renderizado en servidor (SSR) que no es capturado por un Error Boundary propio.
+
+**No se activa** con errores de cliente (hidratación o renderizado en navegador) porque esos son manejados por el cliente y no por el servidor. Para esos casos se puede usar un Error Boundary en la aplicación.
+
+## Limitaciones
+
+- No se puede obtener información dinámica del error (mensaje, stack) en `500.js` porque es una página pre‑renderizada. Si se necesita mostrar detalles del error, se puede implementar un sistema de logging aparte y mostrar un ID de referencia.
+- No se puede ejecutar lógica de servidor (`getServerSideProps`) porque el error ya ha ocurrido y la petición se considera fallida.
+- En desarrollo nunca se muestra; Next.js muestra el overlay de error con el stack.
+
+## Ejemplo con `getStaticProps`
+
+```js
+export async function getStaticProps() {
+  const supportEmail = process.env.SUPPORT_EMAIL
+  return { props: { supportEmail } }
+}
+
+export default function Custom500({ supportEmail }) {
+  return (
+    <div>
+      <h1>500 - Algo salió mal</h1>
+      <p>Estamos trabajando para solucionarlo. Contacta a {supportEmail}</p>
+    </div>
+  )
+}
+```
+
+## Relación con `_error`
+
+Al igual que con 404, `_error` actúa como respaldo. Si quieres una página de error unificada para todos los códigos (404, 500, etc.), basta con crear solo `_error`. Si necesitas diseños específicos, crea las páginas individuales.
+
+## Diferencias entre 404 y 500
+
+- 404: Ruta no encontrada o contenido no disponible (controlado).
+- 500: Error no controlado en el servidor.
+- Ambas son páginas estáticas, no reciben `context` de la petición.
