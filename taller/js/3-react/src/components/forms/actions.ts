@@ -1,0 +1,25 @@
+'use server'
+
+import { updateUser } from "@data/";
+
+
+export async function updateNameAction(
+    prevState: {
+        userId: string;
+        name: string;
+        message: string;
+    },
+    formData: FormData
+) {
+    const userId = prevState.userId;
+    const newName = formData.get("name") as string;
+    await updateUser(userId, newName)
+
+
+    await new Promise((resolve) => setTimeout(resolve, 5000))
+    return {
+        userId: userId,
+        name: newName,
+        message: "success",
+    }
+}
