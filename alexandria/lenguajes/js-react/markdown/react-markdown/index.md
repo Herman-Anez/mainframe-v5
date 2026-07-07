@@ -1,4 +1,4 @@
-# Uso directo de Markdown en Next.js (forma más fácil)
+# Uso directo de Markdown en Next.js y react (forma más fácil)
 
 La forma más simple es leer el archivo `.md` con `fs` dentro de un **Server Component** (el default en `app/`, sin `"use client"`). No requiere tocar Webpack ni Turbopack, y funciona igual en ambos bundlers.
 
