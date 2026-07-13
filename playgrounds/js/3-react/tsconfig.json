@@ -11,7 +11,7 @@
   "compilerOptions": {
     "paths": {
       "@components/*": [
-        "./src/stories/1-components/*"
+        "./src/stories/1/*"
       ]
     }
   },
