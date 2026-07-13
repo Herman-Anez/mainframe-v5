@@ -1,3 +1,4 @@
+
 export type ExampleComponentProps = {
     flag1: boolean;
     text: string;
@@ -32,20 +33,13 @@ export function Component({ flag1, text, styles }: ExampleComponentProps) {
     );
 }
 
-export function Component1({  extraText: text }: ExampleComponentProps2) {
+export function Component1({  extraText="extraText" }: ExampleComponentProps2) {
     return (
         <>
             {fallbackStyle}
-            {<p>{  "nope"}</p>}
+            {<p>{extraText}</p>}
         </>
     );
 }
-export function Component2({ flag1, text, styles }: ExampleComponentProps) {
-    return (
-        <>
-            {fallbackStyle}
-            {<p className={styles?.texto}>{flag1 ? text : "nope"}</p>}
-        </>
-    );
-}
-export default { Component1, Component2, Component };
+
+export default { Component1, Component };
