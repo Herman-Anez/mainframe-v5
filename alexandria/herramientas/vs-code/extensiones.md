@@ -1,4 +1,0 @@
-
-quokka
-tabstronaut
-pin folders

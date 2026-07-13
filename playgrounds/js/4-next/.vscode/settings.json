@@ -1,0 +1,8 @@
+{
+
+    "files.exclude": {
+        "*.*": true,//todos los archivos de la rais
+        "node_modules": true,//todos los archivos de la rais
+    }
+
+}

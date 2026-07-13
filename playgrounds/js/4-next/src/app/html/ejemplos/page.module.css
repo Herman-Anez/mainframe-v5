@@ -1,0 +1,18 @@
+
+.selector {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.select {
+  align-self: flex-start;
+  padding: 8px 12px;
+  font-size: 14px;
+  border-radius: 8px;
+  border: 1px solid var(--button-secondary-border);
+  background: var(--foreground);
+  color: var(--text-primary);
+  cursor: pointer;
+}

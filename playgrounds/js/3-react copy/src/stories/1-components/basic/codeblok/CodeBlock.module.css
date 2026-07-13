@@ -1,0 +1,139 @@
+.codeBlockWrapper {
+  display: block;
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.copyButton {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 1;
+  font-family: inherit;
+  font-size: 0.75rem;
+  line-height: 1;
+  padding: 0.35rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid var(--md-hr);
+  background: var(--md-code-bg);
+  color: var(--md-text);
+  cursor: pointer;
+  opacity: 0.75;
+  transition: opacity 0.15s ease;
+}
+
+.copyButton:hover,
+.copyButton:focus-visible {
+  opacity: 1;
+}
+
+.pre {
+  border-radius: 8px;
+  padding: 1rem 1rem calc(1.5rem);
+  overflow-x: auto;
+  background: var(--hljs-bg);
+  border: 2px solid #ffa500;
+}
+
+.pre code {
+  background: none;
+  padding: 0;
+  font-size: 0.85em;
+}
+
+.pre :global(code.hljs) {
+  padding: 0;
+}
+
+/* Syntax highlighting (rehype-highlight / highlight.js classnames are global) */
+.codeBlockWrapper :global(.hljs) {
+  color: var(--hljs-fg);
+  background: var(--hljs-bg);
+}
+
+.codeBlockWrapper :global(.hljs-doctag),
+.codeBlockWrapper :global(.hljs-keyword),
+.codeBlockWrapper :global(.hljs-meta .hljs-keyword),
+.codeBlockWrapper :global(.hljs-template-tag),
+.codeBlockWrapper :global(.hljs-template-variable),
+.codeBlockWrapper :global(.hljs-type),
+.codeBlockWrapper :global(.hljs-variable.language_) {
+  color: var(--hljs-keyword);
+}
+
+.codeBlockWrapper :global(.hljs-title),
+.codeBlockWrapper :global(.hljs-title.class_),
+.codeBlockWrapper :global(.hljs-title.class_.inherited__),
+.codeBlockWrapper :global(.hljs-title.function_) {
+  color: var(--hljs-entity);
+}
+
+.codeBlockWrapper :global(.hljs-attr),
+.codeBlockWrapper :global(.hljs-attribute),
+.codeBlockWrapper :global(.hljs-literal),
+.codeBlockWrapper :global(.hljs-meta),
+.codeBlockWrapper :global(.hljs-number),
+.codeBlockWrapper :global(.hljs-operator),
+.codeBlockWrapper :global(.hljs-variable),
+.codeBlockWrapper :global(.hljs-selector-attr),
+.codeBlockWrapper :global(.hljs-selector-class),
+.codeBlockWrapper :global(.hljs-selector-id) {
+  color: var(--hljs-constant);
+}
+
+.codeBlockWrapper :global(.hljs-regexp),
+.codeBlockWrapper :global(.hljs-string),
+.codeBlockWrapper :global(.hljs-meta .hljs-string) {
+  color: var(--hljs-string);
+}
+
+.codeBlockWrapper :global(.hljs-built_in),
+.codeBlockWrapper :global(.hljs-symbol) {
+  color: var(--hljs-variable);
+}
+
+.codeBlockWrapper :global(.hljs-comment),
+.codeBlockWrapper :global(.hljs-code),
+.codeBlockWrapper :global(.hljs-formula) {
+  color: var(--hljs-comment);
+}
+
+.codeBlockWrapper :global(.hljs-name),
+.codeBlockWrapper :global(.hljs-quote),
+.codeBlockWrapper :global(.hljs-selector-tag),
+.codeBlockWrapper :global(.hljs-selector-pseudo) {
+  color: var(--hljs-tag);
+}
+
+.codeBlockWrapper :global(.hljs-subst) {
+  color: var(--hljs-fg);
+}
+
+.codeBlockWrapper :global(.hljs-section) {
+  color: var(--hljs-section);
+  font-weight: bold;
+}
+
+.codeBlockWrapper :global(.hljs-bullet) {
+  color: var(--hljs-bullet);
+}
+
+.codeBlockWrapper :global(.hljs-emphasis) {
+  color: var(--hljs-fg);
+  font-style: italic;
+}
+
+.codeBlockWrapper :global(.hljs-strong) {
+  color: var(--hljs-fg);
+  font-weight: bold;
+}
+
+.codeBlockWrapper :global(.hljs-addition) {
+  color: var(--hljs-addition-fg);
+  background-color: var(--hljs-addition-bg);
+}
+
+.codeBlockWrapper :global(.hljs-deletion) {
+  color: var(--hljs-deletion-fg);
+  background-color: var(--hljs-deletion-bg);
+}
