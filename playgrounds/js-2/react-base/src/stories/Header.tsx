@@ -2,7 +2,7 @@ import React from 'react';
 
 
 import './header.css';
-import { Button } from './1-old/organiza/ejemplos/Button';
+import { Button } from './1/organiza/ejemplos/Button';
 
 type User = {
   name: string;
