@@ -2,15 +2,22 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { Card, Column, Heading, Text } from '@once-ui-system/core';
 
 const meta = {
-  title: 'Once UI/Card',
+  title: 'Once UI/Data Display/Card',
   component: Card,
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component: 'A container for grouping related content, optionally rendered as a clickable link when given an href.',
+      },
+    },
+  },
   argTypes: {
-    fillHeight: { control: 'boolean' },
-    padding: { control: 'select', options: ['0', '4', '8', '12', '16', '20', '24', '32'] },
-    radius: { control: 'select', options: ['none', 's', 'm', 'l', 'full'] },
-    border: { control: 'select', options: ['neutral-alpha-weak', 'neutral-alpha-medium', 'neutral-alpha-strong'] },
-    href: { control: 'text' },
+    fillHeight: { control: 'boolean', description: 'Makes the card expand to fill the height of its container.' },
+    padding: { control: 'select', options: ['0', '4', '8', '12', '16', '20', '24', '32'], description: 'Inner padding of the card.' },
+    radius: { control: 'select', options: ['none', 's', 'm', 'l', 'full'], description: 'Corner radius of the card.' },
+    border: { control: 'select', options: ['neutral-alpha-weak', 'neutral-alpha-medium', 'neutral-alpha-strong'], description: 'Border strength of the card.' },
+    href: { control: 'text', description: 'URL that turns the card into a link.' },
   },
   args: {
     padding: '24',

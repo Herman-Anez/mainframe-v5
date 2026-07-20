@@ -2,15 +2,22 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { Avatar, Row } from '@once-ui-system/core';
 
 const meta = {
-  title: 'Once UI/Avatar',
+  title: 'Once UI/Data Display/Avatar',
   component: Avatar,
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component: 'A visual representation of a user, showing a profile image, initials, or an empty placeholder state.',
+      },
+    },
+  },
   argTypes: {
-    size: { control: 'select', options: ['xs', 's', 'm', 'l', 'xl'] },
-    loading: { control: 'boolean' },
-    empty: { control: 'boolean' },
-    value: { control: 'text' },
-    src: { control: 'text' },
+    size: { control: 'select', options: ['xs', 's', 'm', 'l', 'xl'], description: 'Size of the avatar.' },
+    loading: { control: 'boolean', description: 'Shows the avatar in a loading state.' },
+    empty: { control: 'boolean', description: 'Shows an empty placeholder instead of an image or initials.' },
+    value: { control: 'text', description: 'Initials or text displayed when no image is available.' },
+    src: { control: 'text', description: 'URL of the image to display.' },
   },
   args: {
     value: 'JD',

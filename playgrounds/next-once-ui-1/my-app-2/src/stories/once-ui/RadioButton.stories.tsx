@@ -3,13 +3,20 @@ import { useState } from 'react';
 import { RadioButton, Column } from '@once-ui-system/core';
 
 const meta = {
-  title: 'Once UI/RadioButton',
+  title: 'Once UI/Forms/RadioButton',
   component: RadioButton,
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component: 'A radio input for selecting a single option from a group of mutually exclusive choices.',
+      },
+    },
+  },
   argTypes: {
-    disabled: { control: 'boolean' },
-    label: { control: 'text' },
-    description: { control: 'text' },
+    disabled: { control: 'boolean', description: 'Disables the radio button and prevents interaction.' },
+    label: { control: 'text', description: 'Label text displayed next to the radio button.' },
+    description: { control: 'text', description: 'Helper text displayed below the label.' },
   },
   args: {
     label: 'Option A',

@@ -2,15 +2,22 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { Feedback, Column } from '@once-ui-system/core';
 
 const meta = {
-  title: 'Once UI/Feedback',
+  title: 'Once UI/Feedback/Feedback',
   component: Feedback,
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component: 'An inline message box for communicating status, alerts, or contextual information to the user.',
+      },
+    },
+  },
   argTypes: {
-    variant: { control: 'select', options: ['info', 'danger', 'warning', 'success'] },
-    icon: { control: 'boolean' },
-    showCloseButton: { control: 'boolean' },
-    title: { control: 'text' },
-    description: { control: 'text' },
+    variant: { control: 'select', options: ['info', 'danger', 'warning', 'success'], description: 'Severity/color scheme of the message.' },
+    icon: { control: 'boolean', description: 'Shows an icon matching the variant.' },
+    showCloseButton: { control: 'boolean', description: 'Shows a button to dismiss the message.' },
+    title: { control: 'text', description: 'Title text of the message.' },
+    description: { control: 'text', description: 'Body text of the message.' },
   },
   args: {
     variant: 'info',

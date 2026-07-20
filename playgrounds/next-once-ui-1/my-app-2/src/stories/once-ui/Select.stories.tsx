@@ -9,15 +9,22 @@ const fruitOptions = [
 ];
 
 const meta = {
-  title: 'Once UI/Select',
+  title: 'Once UI/Forms/Select',
   component: Select,
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component: 'A dropdown field for choosing one or more options from a list, with optional search filtering.',
+      },
+    },
+  },
   argTypes: {
-    searchable: { control: 'boolean' },
-    multiple: { control: 'boolean' },
-    fillWidth: { control: 'boolean' },
-    label: { control: 'text' },
-    placeholder: { control: 'text' },
+    searchable: { control: 'boolean', description: 'Shows a search field to filter the options.' },
+    multiple: { control: 'boolean', description: 'Allows selecting more than one option.' },
+    fillWidth: { control: 'boolean', description: 'Makes the select expand to fill its container width.' },
+    label: { control: 'text', description: 'Label text displayed above the select.' },
+    placeholder: { control: 'text', description: 'Placeholder text shown when no option is selected.' },
   },
   args: {
     id: 'select-default',

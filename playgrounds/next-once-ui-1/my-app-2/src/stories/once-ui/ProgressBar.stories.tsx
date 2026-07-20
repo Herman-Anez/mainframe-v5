@@ -2,15 +2,22 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { ProgressBar, Column } from '@once-ui-system/core';
 
 const meta = {
-  title: 'Once UI/ProgressBar',
+  title: 'Once UI/Feedback/ProgressBar',
   component: ProgressBar,
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component: 'A horizontal bar that visualizes progress toward completion of a task or process.',
+      },
+    },
+  },
   argTypes: {
-    value: { control: { type: 'range', min: 0, max: 100, step: 1 } },
-    min: { control: 'number' },
-    max: { control: 'number' },
-    label: { control: 'boolean' },
-    labelPosition: { control: 'select', options: ['top', 'bottom', 'left', 'right'] },
+    value: { control: { type: 'range', min: 0, max: 100, step: 1 }, description: 'Current progress value.' },
+    min: { control: 'number', description: 'Minimum value of the progress range.' },
+    max: { control: 'number', description: 'Maximum value of the progress range.' },
+    label: { control: 'boolean', description: 'Shows a percentage label alongside the bar.' },
+    labelPosition: { control: 'select', options: ['top', 'bottom', 'left', 'right'], description: 'Position of the label relative to the bar.' },
   },
   args: {
     value: 60,

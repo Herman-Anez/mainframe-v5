@@ -2,13 +2,20 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { Tooltip, Row } from '@once-ui-system/core';
 
 const meta = {
-  title: 'Once UI/Tooltip',
+  title: 'Once UI/Overlay/Tooltip',
   component: Tooltip,
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component: 'A small floating label used to show additional context or a hint, typically alongside another element.',
+      },
+    },
+  },
   argTypes: {
-    label: { control: 'text' },
-    prefixIcon: { control: 'text' },
-    suffixIcon: { control: 'text' },
+    label: { control: 'text', description: 'Text displayed inside the tooltip.' },
+    prefixIcon: { control: 'text', description: 'Icon rendered before the label.' },
+    suffixIcon: { control: 'text', description: 'Icon rendered after the label.' },
   },
   args: {
     label: 'Helpful hint',

@@ -2,18 +2,26 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { Tag, Row } from '@once-ui-system/core';
 
 const meta = {
-  title: 'Once UI/Tag',
+  title: 'Once UI/Data Display/Tag',
   component: Tag,
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component: 'A small label used to categorize or highlight an item, such as a status or category marker.',
+      },
+    },
+  },
   argTypes: {
     variant: {
       control: 'select',
       options: ['neutral', 'brand', 'accent', 'info', 'danger', 'warning', 'success', 'gradient'],
+      description: 'Color scheme of the tag.',
     },
-    size: { control: 'select', options: ['s', 'm', 'l'] },
-    prefixIcon: { control: 'text' },
-    suffixIcon: { control: 'text' },
-    label: { control: 'text' },
+    size: { control: 'select', options: ['s', 'm', 'l'], description: 'Size of the tag.' },
+    prefixIcon: { control: 'text', description: 'Icon rendered before the label.' },
+    suffixIcon: { control: 'text', description: 'Icon rendered after the label.' },
+    label: { control: 'text', description: 'Text displayed inside the tag.' },
   },
   args: {
     label: 'New',

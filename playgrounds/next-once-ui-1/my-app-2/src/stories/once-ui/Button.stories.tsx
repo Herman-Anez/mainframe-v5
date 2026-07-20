@@ -2,24 +2,32 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { Button, Row } from '@once-ui-system/core';
 
 const meta = {
-  title: 'Once UI/Button',
+  title: 'Once UI/Actions/Button',
   component: Button,
   tags: ['autodocs'],
+  parameters: {
+    docs: {
+      description: {
+        component: 'A clickable button used to trigger actions, submit forms, or navigate when given an href.',
+      },
+    },
+  },
   argTypes: {
     variant: {
       control: 'select',
       options: ['primary', 'secondary', 'tertiary', 'quaternary', 'subtle', 'danger', 'success', 'warning', 'ghost', 'link'],
+      description: 'Visual style of the button.',
     },
-    size: { control: 'select', options: ['s', 'm', 'l'] },
-    weight: { control: 'select', options: ['default', 'strong'] },
-    rounded: { control: 'boolean' },
-    disabled: { control: 'boolean' },
-    loading: { control: 'boolean' },
-    fillWidth: { control: 'boolean' },
-    arrowIcon: { control: 'boolean' },
-    prefixIcon: { control: 'text' },
-    suffixIcon: { control: 'text' },
-    label: { control: 'text' },
+    size: { control: 'select', options: ['s', 'm', 'l'], description: 'Size of the button.' },
+    weight: { control: 'select', options: ['default', 'strong'], description: 'Font weight of the button label.' },
+    rounded: { control: 'boolean', description: 'Renders the button with fully rounded corners.' },
+    disabled: { control: 'boolean', description: 'Disables the button and prevents interaction.' },
+    loading: { control: 'boolean', description: 'Shows a loading spinner and disables interaction.' },
+    fillWidth: { control: 'boolean', description: 'Makes the button expand to fill its container width.' },
+    arrowIcon: { control: 'boolean', description: 'Shows a trailing arrow icon.' },
+    prefixIcon: { control: 'text', description: 'Icon rendered before the label.' },
+    suffixIcon: { control: 'text', description: 'Icon rendered after the label.' },
+    label: { control: 'text', description: 'Text displayed inside the button.' },
   },
   args: {
     label: 'Button',
