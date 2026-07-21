@@ -1,4 +1,4 @@
-e # Cómo se conectaron Storybook + Next.js + Once UI en este proyecto
+# Cómo se conectaron Storybook + Next.js + Once UI en este proyecto
 
 Este documento explica, paso a paso y en lenguaje simple, qué se hizo para que Storybook funcione en un proyecto Next.js que usa la librería de componentes **Once UI**. La idea es que puedas entenderlo aunque nunca hayas tocado Storybook antes.
 
@@ -158,19 +158,55 @@ export default defineConfig({
 });
 ```
 
-`define` le dice a Vite: "en cualquier parte del código donde veas la palabra `__dirname`, reemplázala directamente por este texto fijo (la ruta del proyecto) antes de ejecutar". Así ya no depende de que exista la variable en tiempo de ejecución — Vite la sustituye de antemano, como un "buscar y reemplazar" a nivel de build. Con este único cambio, los 5 archivos de story pasaron a funcionar.
+`define` le dice a Vite: "en cualquier parte del código donde veas la palabra `__dirname`, reemplázala directamente por este texto fijo (la ruta del proyecto) antes de ejecutar". Así ya no depende de que exista la variable en tiempo de ejecución — Vite la sustituye de antemano, como un "buscar y reemplazar" a nivel de build. Con este cambio, los 5 archivos de story pasaron a funcionar **dentro de los tests** (`vitest --project storybook run`).
 
-## Paso 6: Verificación final
+## Paso 6: el mismo error, pero en el servidor real de Storybook
 
-```bash
-pnpm exec vitest --project storybook run   # 2 archivos, 3 tests, todos verdes
-pnpm exec tsc --noEmit                     # sin errores de TypeScript
+**Importante:** el fix del Paso 5 solo se aplicó a `vitest.config.ts`, que es la configuración que usan los *tests* automáticos. No se aplicó a `.storybook/main.ts`, que es la configuración que usa `storybook dev` — el servidor que efectivamente abrís en el navegador para mirar las stories a mano.
+
+Esto no se notó de inmediato porque son dos configuraciones de Vite separadas, y los tests pasaban perfecto. Pero al correr `pnpm exec storybook dev -p 6006` y abrir cualquier story en el navegador, la pantalla se quedaba con el spinner de carga para siempre — el mismo `ReferenceError: __dirname is not defined`, esta vez explotando dentro del proceso de Vite que sirve el navegador, sin mostrar ningún error visible en pantalla.
+
+La solución fue copiar exactamente el mismo truco a `.storybook/main.ts`, usando el gancho `viteFinal` que Storybook expone para modificar su configuración de Vite antes de arrancar:
+
+```ts
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const dirname =
+  typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url));
+
+const config: StorybookConfig = {
+  // ...resto de la config...
+  viteFinal: async (viteConfig) => {
+    viteConfig.define = {
+      ...viteConfig.define,
+      __dirname: JSON.stringify(dirname),
+    };
+    return viteConfig;
+  },
+};
 ```
+
+**Moraleja para el futuro:** si `storybook dev` se queda cargando sin mostrar error, y en particular si acabás de tocar `.storybook/main.ts` o actualizar dependencias, revisar primero si este `define` sigue ahí. También conviene borrar `node_modules/.cache/storybook` y reiniciar el servidor limpio (`lsof -ti:6006 | xargs -r kill -9` antes de volver a levantarlo), por si quedó una versión vieja de la config cacheada.
 
 ## Paso 7: Limpieza
 
 Storybook, al instalarse, agrega una carpeta `src/stories/` con componentes y stories de ejemplo genéricos (no relacionados a Once UI ni a esta app) solo para que tengas algo que ver la primera vez que abres Storybook. Una vez que confirmamos que **nuestras** stories reales funcionan, se borró esa carpeta de ejemplo (`Button`, `Header`, `Page`, sus `.css` y las imágenes de `assets/`) porque ya no aporta nada y solo generaría confusión o falsos positivos en los tests.
 
+## Paso 8: Verificación final
+
+Con la carpeta de ejemplo ya borrada, solo quedan las stories reales del proyecto:
+
+```bash
+pnpm exec vitest --project storybook run   # 2 archivos, 3 tests, todos verdes
+pnpm exec tsc --noEmit                     # sin errores de TypeScript
+pnpm exec storybook dev -p 6006            # abre en el navegador sin quedarse cargando
+```
+
 ## Resumen en una frase
 
-Se le enseñó a Storybook a envolver cada componente exactamente igual que lo hace `layout.tsx` en la app real (mismos CSS, mismo árbol de Providers), se escribieron pruebas para las dos páginas reales del proyecto, se probó con un valor de CSS concreto (`display: flex`) que los estilos de Once UI de verdad se cargan, y se corrigió un choque de compatibilidad entre Next.js y el entorno de pruebas de Vite (`__dirname`) que impedía que cualquier prueba corriera.
+Se le enseñó a Storybook a envolver cada componente exactamente igual que lo hace `layout.tsx` en la app real (mismos CSS, mismo árbol de Providers), se escribieron pruebas para las dos páginas reales del proyecto, se probó con un valor de CSS concreto (`display: flex`) que los estilos de Once UI de verdad se cargan, y se corrigió el mismo choque de compatibilidad entre Next.js y Vite (`__dirname`) en **dos configuraciones distintas** — la de los tests y la del servidor de desarrollo real — porque arreglar solo una no alcanza para que todo funcione de punta a punta.
+
+## Nota (sesión posterior)
+
+Este documento describe el setup original. Una sesión posterior de trabajo agregó ~120 archivos de stories documentando (casi) todos los componentes de Once UI, organizados en categorías, y encontró/corrigió el problema del Paso 6 descrito arriba (que en ese momento seguía sin arreglar). El estado actual completo del proyecto — qué falta, comandos de verificación, gotchas conocidos — está en `HANDOFF.md` en la raíz del repo.
