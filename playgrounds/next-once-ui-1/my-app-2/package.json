@@ -10,7 +10,8 @@
     "lint": "next lint",
     "biome-write": "npx @biomejs/biome format --write .",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "test": "vitest run --project unit"
   },
   "dependencies": {
     "@once-ui-system/core": "^1.7.6",
@@ -24,23 +25,26 @@
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
-    "@types/node": "20.17.23",
-    "@types/react": "19.0.1",
-    "@types/react-dom": "19.0.2",
-    "typescript": "5.8.2",
-    "storybook": "10.5.2",
-    "@storybook/nextjs-vite": "10.5.2",
     "@chromatic-com/storybook": "^5.2.1",
-    "@storybook/addon-vitest": "10.5.2",
     "@storybook/addon-a11y": "10.5.2",
     "@storybook/addon-docs": "10.5.2",
     "@storybook/addon-mcp": "^0.7.0",
-    "vite": "^8.1.5",
-    "eslint-plugin-storybook": "10.5.2",
-    "vitest": "^4.1.10",
-    "playwright": "^1.61.1",
+    "@storybook/addon-vitest": "10.5.2",
+    "@storybook/nextjs-vite": "10.5.2",
+    "@testing-library/jest-dom": "^7.0.0",
+    "@testing-library/react": "^16.3.2",
+    "@types/node": "20.17.23",
+    "@types/react": "19.0.1",
+    "@types/react-dom": "19.0.2",
     "@vitest/browser-playwright": "^4.1.10",
-    "@vitest/coverage-v8": "^4.1.10"
+    "@vitest/coverage-v8": "^4.1.10",
+    "eslint-plugin-storybook": "10.5.2",
+    "jsdom": "^29.1.1",
+    "playwright": "^1.61.1",
+    "storybook": "10.5.2",
+    "typescript": "5.8.2",
+    "vite": "^8.1.5",
+    "vitest": "^4.1.10"
   },
   "overrides": {
     "@types/react": "19.0.1",
