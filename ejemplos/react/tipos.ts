@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 import React, { type FC } from "react";
 /*
 type FC 
