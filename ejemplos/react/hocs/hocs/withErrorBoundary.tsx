@@ -2,7 +2,6 @@
 
 import { Component } from "react";
 import type { ComponentType, ErrorInfo, ReactNode } from "react";
-import { Feedback } from "@once-ui-system/core";
 
 interface State {
   hasError: boolean;
@@ -40,11 +39,18 @@ export function withErrorBoundary<P extends object>(Wrapped: ComponentType<P>) {
     render(): ReactNode {
       if (this.state.hasError) {
         return (
-          <Feedback
-            variant="danger"
-            title="Something went wrong"
-            description={this.state.error?.message ?? "Unknown error"}
-          />
+          <div
+            role="alert"
+            style={{
+              padding: 16,
+              borderRadius: 12,
+              background: "#ef444422",
+              color: "#b91c1c",
+            }}
+          >
+            <strong>Something went wrong</strong>
+            <div>{this.state.error?.message ?? "Unknown error"}</div>
+          </div>
         );
       }
 

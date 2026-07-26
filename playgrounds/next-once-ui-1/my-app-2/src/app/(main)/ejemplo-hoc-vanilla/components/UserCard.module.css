@@ -1,0 +1,54 @@
+.card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #3333;
+  border-radius: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  border-radius: 999px;
+  background: #6366f1;
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.name {
+  font-weight: 600;
+}
+
+.email {
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+.role {
+  display: inline-block;
+  align-self: flex-start;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #6366f11a;
+  color: #6366f1;
+}
+
+.debugId {
+  font-size: 12px;
+  opacity: 0.6;
+}

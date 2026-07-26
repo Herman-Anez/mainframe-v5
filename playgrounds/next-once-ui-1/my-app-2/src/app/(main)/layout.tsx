@@ -66,7 +66,21 @@ export default function RootLayout({
       </head>
       <Providers>
         <Column as="body" background="page" fillWidth margin="0" padding="0">
-          <Column fillWidth maxHeight="100dvh" aspectRatio="1" horizontal="center" position="absolute" top="0" left="0">
+          {/* Purely decorative background layer. Without pointer-events:
+              none, this absolutely-positioned div sits above the page's
+              interactive elements in stacking order and silently swallows
+              every click/checkbox toggle underneath it. See
+              explicacion-fix-overlay-pointer-events.md */}
+          <Column
+            fillWidth
+            maxHeight="100dvh"
+            aspectRatio="1"
+            horizontal="center"
+            position="absolute"
+            top="0"
+            left="0"
+            style={{ pointerEvents: "none" }}
+          >
             <Mask maxWidth="m" x={50} y={0} radius={50}>
               <MatrixFx
                 size={1.5}

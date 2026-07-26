@@ -1,1 +1,11 @@
-{ "exclude": ["**"] }
+{
+	"compilerOptions": {
+		"target": "ES2020",
+		"module": "CommonJS",
+		"strict": true,
+		"esModuleInterop": true,
+		"skipLibCheck": true
+	},
+	"include": ["**/*"],
+	"exclude": ["node_modules", "ejemplo-hoc"]
+}
