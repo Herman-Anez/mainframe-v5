@@ -5,6 +5,7 @@ import { TodoListRepositoryPort } from '../../../ports/out/TodoListRepositoryPor
 import { TodoListId } from '../../../../1-domain/value-objects/TodoListId';
 import { TodoListNotFoundException } from '../../../../1-domain/exceptions/TodoListNotFoundException';
 import { GetTodoListOutput } from './GetTodoListOutput';
+import { TodoListDomainService } from '../../../../1-domain/services/TodoListDomainService';
 
 export class GetTodoListInteractor implements GetTodoListUseCase {
     constructor(private readonly repository: TodoListRepositoryPort) { }
@@ -15,10 +16,13 @@ export class GetTodoListInteractor implements GetTodoListUseCase {
             if (!list) {
                 throw new TodoListNotFoundException(input.listId);
             }
-
+            const completionPercentage = TodoListDomainService.calculateCompletionPercentage(list);
+            const isFullyCompleted = TodoListDomainService.isFullyCompleted(list);
             const todoListOutput: GetTodoListOutput = {
                 id: list.id.value,
                 name: list.name,
+                completionPercentage,
+                isFullyCompleted,
                 items: list.items.map(item => ({
                     id: item.id.value,
                     title: item.title,

@@ -1,4 +1,5 @@
 import { TodoListId } from '../value-objects/TodoListId';
+import { Title } from '../value-objects/Title';
 import { TodoItem } from './TodoItem';
 import { DomainEvent } from '../events/DomainEvent';
 import { TodoListCreated } from '../events/TodoListCreated';
@@ -7,6 +8,7 @@ import { TodoItemCompleted } from '../events/TodoItemCompleted';
 import { TodoItemRenamed } from '../events/TodoItemRenamed';
 import { TodoItemDescriptionChanged } from '../events/TodoItemDescriptionChanged';
 import { TodoItemPriorityChanged } from '../events/TodoItemPriorityChanged';
+import { TodoItemNotFoundException } from '../exceptions/TodoItemNotFoundException';
 
 export class TodoList {
   private _items: TodoItem[] = [];
@@ -14,22 +16,22 @@ export class TodoList {
 
   private constructor(
     readonly id: TodoListId,
-    private _name: string,
+    private _name: Title,
   ) {}
 
   static create(name: string): TodoList {
-    const list = new TodoList(TodoListId.create(), name.trim());
+    const list = new TodoList(TodoListId.create(), Title.create(name));
     list.addDomainEvent(new TodoListCreated(list.id.value, list.name));
     return list;
   }
 
   static fromPersistence(id: string, name: string, items: TodoItem[]): TodoList {
-    const list = new TodoList(TodoListId.from(id), name);
+    const list = new TodoList(TodoListId.from(id), Title.create(name));
     list._items = items;
     return list;
   }
 
-  get name(): string { return this._name; }
+  get name(): string { return this._name.value; }
   get items(): readonly TodoItem[] { return this._items; }
 
   get domainEvents(): readonly DomainEvent[] { return this._domainEvents; }
@@ -73,7 +75,7 @@ export class TodoList {
   private findItemOrThrow(itemId: string): TodoItem {
     const item = this._items.find(i => i.id.value === itemId);
     if (!item) {
-      throw new Error(`TodoItem with id ${itemId} not found`);
+      throw new TodoItemNotFoundException(itemId, this.id.value);
     }
     return item;
   }

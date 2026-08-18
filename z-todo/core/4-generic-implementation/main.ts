@@ -9,6 +9,7 @@ import { DeleteTodoListInteractor } from "../2-application/use-cases/commands/de
 import { ListTodoListsInteractor } from "../2-application/use-cases/query/list-todo-lists/ListTodoListsInteractor";
 import { InMemoryEventBus } from "../3-infrastructure/messaging/InMemoryEventBus";
 import { InMemoryTodoListRepository } from "../3-infrastructure/persistence/InMemoryTodoListRepository";
+import { InMemoryUnitOfWork } from "../3-infrastructure/unit-of-work/InMemoryUnitOfWork";
 import { TodoListController } from "./api/controllers/TodoListController";
 import { CreateTodoListPresenter } from "./api/presenters/CreateTodoListPresenter";
 import { TodoListId } from "../1-domain/value-objects/TodoListId";
@@ -16,6 +17,7 @@ import { TodoListId } from "../1-domain/value-objects/TodoListId";
 // Infraestructura
 const repository = new InMemoryTodoListRepository();
 const eventBus = new InMemoryEventBus();
+const unitOfWork = new InMemoryUnitOfWork();
 
 // Suscripción a eventos (manejador simple)
 eventBus.subscribe('TodoListCreated', (event) => {
@@ -36,16 +38,19 @@ eventBus.subscribe('TodoItemDescriptionChanged', (event) => {
 eventBus.subscribe('TodoItemPriorityChanged', (event) => {
     console.log(`[EVENT] ${event.eventName} at ${event.occurredOn.toISOString()}`);
 });
+eventBus.subscribe('TodoListDeleted', (event) => {
+    console.log(`[EVENT] ${event.eventName} at ${event.occurredOn.toISOString()}`);
+});
 
 // Casos de uso (interactores)
-const createTodoList = new CreateTodoListInteractor(repository, eventBus);
-const addTodoItem = new AddTodoItemInteractor(repository, eventBus);
-const completeTodoItem = new CompleteTodoItemInteractor(repository, eventBus);
+const createTodoList = new CreateTodoListInteractor(repository, eventBus, unitOfWork);
+const addTodoItem = new AddTodoItemInteractor(repository, eventBus, unitOfWork);
+const completeTodoItem = new CompleteTodoItemInteractor(repository, eventBus, unitOfWork);
 const getTodoList = new GetTodoListInteractor(repository);
-const renameTodoItem = new RenameTodoItemInteractor(repository, eventBus);
-const changeTodoItemDescription = new ChangeTodoItemDescriptionInteractor(repository, eventBus);
-const changeTodoItemPriority = new ChangeTodoItemPriorityInteractor(repository, eventBus);
-const deleteTodoList = new DeleteTodoListInteractor(repository);
+const renameTodoItem = new RenameTodoItemInteractor(repository, eventBus, unitOfWork);
+const changeTodoItemDescription = new ChangeTodoItemDescriptionInteractor(repository, eventBus, unitOfWork);
+const changeTodoItemPriority = new ChangeTodoItemPriorityInteractor(repository, eventBus, unitOfWork);
+const deleteTodoList = new DeleteTodoListInteractor(repository, eventBus, unitOfWork);
 const listTodoLists = new ListTodoListsInteractor(repository);
 
 // Controlador

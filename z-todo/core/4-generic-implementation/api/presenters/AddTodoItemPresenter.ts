@@ -6,7 +6,7 @@ export class AddTodoItemPresenter implements AddTodoItemOutputBoundary {
   constructor() {}
 
   presentSuccess(output: AddTodoItemOutput): void {
-    console.log();
+    console.log(output);
   }
 
   presentError(error: Error): void {

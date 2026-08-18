@@ -3,6 +3,7 @@ import { ListTodoListsInput } from './ListTodoListsInput';
 import { ListTodoListsOutputBoundary } from './ListTodoListsOutputBoundary';
 import { TodoListRepositoryPort } from '../../../ports/out/TodoListRepositoryPort';
 import { GetTodoListOutput } from '../get-todo-list/GetTodoListOutput';
+import { TodoListDomainService } from '../../../../1-domain/services/TodoListDomainService';
 
 export class ListTodoListsInteractor implements ListTodoListsUseCase {
   constructor(private readonly repository: TodoListRepositoryPort) {}
@@ -13,6 +14,8 @@ export class ListTodoListsInteractor implements ListTodoListsUseCase {
       const result: GetTodoListOutput[] = lists.map(list => ({
         id: list.id.value,
         name: list.name,
+        completionPercentage: TodoListDomainService.calculateCompletionPercentage(list),
+        isFullyCompleted: TodoListDomainService.isFullyCompleted(list),
         items: list.items.map(item => ({
           id: item.id.value,
           title: item.title,
