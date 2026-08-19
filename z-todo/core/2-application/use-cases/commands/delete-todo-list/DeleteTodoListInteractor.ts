@@ -30,7 +30,7 @@ export class DeleteTodoListInteractor implements DeleteTodoListUseCase {
         await this.unitOfWork.rollback();
         throw error;
       }
-      this.eventBus.publish([new TodoListDeleted(list.id.value, list.name)]);
+      await this.eventBus.publish([new TodoListDeleted(list.id.value, list.name)]);
 
       output.presentSuccess({ success: true });
     } catch (error) {

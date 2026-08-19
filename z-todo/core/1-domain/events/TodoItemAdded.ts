@@ -8,6 +8,8 @@ export class TodoItemAdded implements DomainEvent {
     readonly todoListId: string,
     readonly todoItemId: string,
     readonly title: string,
+    readonly description: string,
+    readonly priority: string,
   ) {
     this.occurredOn = new Date();
   }

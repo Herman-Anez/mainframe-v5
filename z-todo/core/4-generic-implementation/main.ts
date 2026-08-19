@@ -9,15 +9,21 @@ import { DeleteTodoListInteractor } from "../2-application/use-cases/commands/de
 import { ListTodoListsInteractor } from "../2-application/use-cases/query/list-todo-lists/ListTodoListsInteractor";
 import { InMemoryEventBus } from "../3-infrastructure/messaging/InMemoryEventBus";
 import { InMemoryTodoListRepository } from "../3-infrastructure/persistence/InMemoryTodoListRepository";
+import { InMemoryTodoListReadModelRepository } from "../3-infrastructure/persistence/InMemoryTodoListReadModelRepository";
 import { InMemoryUnitOfWork } from "../3-infrastructure/unit-of-work/InMemoryUnitOfWork";
+import { TodoListProjector } from "../2-application/read-model/TodoListProjector";
 import { TodoListController } from "./api/controllers/TodoListController";
 import { CreateTodoListPresenter } from "./api/presenters/CreateTodoListPresenter";
-import { TodoListId } from "../1-domain/value-objects/TodoListId";
 
-// Infraestructura
+// Infraestructura — lado de escritura
 const repository = new InMemoryTodoListRepository();
 const eventBus = new InMemoryEventBus();
 const unitOfWork = new InMemoryUnitOfWork();
+
+// Infraestructura — lado de lectura (read model, CQRS)
+const readModelRepository = new InMemoryTodoListReadModelRepository();
+const projector = new TodoListProjector(readModelRepository);
+projector.subscribeTo(eventBus);
 
 // Suscripción a eventos (manejador simple)
 eventBus.subscribe('TodoListCreated', (event) => {
@@ -46,12 +52,12 @@ eventBus.subscribe('TodoListDeleted', (event) => {
 const createTodoList = new CreateTodoListInteractor(repository, eventBus, unitOfWork);
 const addTodoItem = new AddTodoItemInteractor(repository, eventBus, unitOfWork);
 const completeTodoItem = new CompleteTodoItemInteractor(repository, eventBus, unitOfWork);
-const getTodoList = new GetTodoListInteractor(repository);
+const getTodoList = new GetTodoListInteractor(readModelRepository);
 const renameTodoItem = new RenameTodoItemInteractor(repository, eventBus, unitOfWork);
 const changeTodoItemDescription = new ChangeTodoItemDescriptionInteractor(repository, eventBus, unitOfWork);
 const changeTodoItemPriority = new ChangeTodoItemPriorityInteractor(repository, eventBus, unitOfWork);
 const deleteTodoList = new DeleteTodoListInteractor(repository, eventBus, unitOfWork);
-const listTodoLists = new ListTodoListsInteractor(repository);
+const listTodoLists = new ListTodoListsInteractor(readModelRepository);
 
 // Controlador
 const controller = new TodoListController(
@@ -81,9 +87,9 @@ async function run(): Promise<void> {
     await controller.addItem({ listId, title: 'Comprar leche', description: '2 litros', priority: 'HIGH' });
     await controller.addItem({ listId, title: 'Comprar pan', description: '', priority: 'LOW' });
 
-    const listAfterAdd = await repository.findById(TodoListId.from(listId));
-    const itemId = listAfterAdd?.items[0]?.id.value;
-    const secondItemId = listAfterAdd?.items[1]?.id.value;
+    const listAfterAdd = await readModelRepository.findById(listId);
+    const itemId = listAfterAdd?.items[0]?.id;
+    const secondItemId = listAfterAdd?.items[1]?.id;
 
     if (itemId) {
         await controller.completeItem({ listId, itemId });

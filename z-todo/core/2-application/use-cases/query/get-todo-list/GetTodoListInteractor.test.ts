@@ -2,22 +2,25 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { GetTodoListInteractor } from './GetTodoListInteractor';
 import { GetTodoListOutput } from './GetTodoListOutput';
-import { TodoList } from '../../../../1-domain/entities/TodoList';
-import { InMemoryTodoListRepository } from '../../../../3-infrastructure/persistence/InMemoryTodoListRepository';
+import { InMemoryTodoListReadModelRepository } from '../../../../3-infrastructure/persistence/InMemoryTodoListReadModelRepository';
 import { capture } from '../../../shared/testing/capturePresenter';
 
 test('GetTodoListInteractor devuelve la lista con completionPercentage e isFullyCompleted', async () => {
-  const repository = new InMemoryTodoListRepository();
-  const list = TodoList.create('Compras');
-  const first = list.addItem('Comprar leche');
-  list.addItem('Comprar pan');
-  list.completeItem(first.id.value);
-  list.clearEvents();
-  await repository.save(list);
+  const readModel = new InMemoryTodoListReadModelRepository();
+  await readModel.upsert({
+    id: 'list-1',
+    name: 'Compras',
+    completionPercentage: 50,
+    isFullyCompleted: false,
+    items: [
+      { id: 'item-1', title: 'Comprar leche', description: '', status: 'COMPLETED', priority: 'MEDIUM' },
+      { id: 'item-2', title: 'Comprar pan', description: '', status: 'TODO', priority: 'MEDIUM' },
+    ],
+  });
 
-  const interactor = new GetTodoListInteractor(repository);
+  const interactor = new GetTodoListInteractor(readModel);
   const { presenter, state } = capture<GetTodoListOutput>();
-  await interactor.execute({ listId: list.id.value }, presenter);
+  await interactor.execute({ listId: 'list-1' }, presenter);
 
   assert.equal(state.error, undefined);
   assert.equal(state.success?.items.length, 2);
@@ -26,8 +29,8 @@ test('GetTodoListInteractor devuelve la lista con completionPercentage e isFully
 });
 
 test('GetTodoListInteractor reporta TodoListNotFoundException si la lista no existe', async () => {
-  const repository = new InMemoryTodoListRepository();
-  const interactor = new GetTodoListInteractor(repository);
+  const readModel = new InMemoryTodoListReadModelRepository();
+  const interactor = new GetTodoListInteractor(readModel);
 
   const { presenter, state } = capture<GetTodoListOutput>();
   await interactor.execute({ listId: 'no-existe' }, presenter);

@@ -44,7 +44,7 @@ export class TodoList {
     }
     const item = TodoItem.create(title, description, priority);
     this._items.push(item);
-    this.addDomainEvent(new TodoItemAdded(this.id.value, item.id.value, item.title));
+    this.addDomainEvent(new TodoItemAdded(this.id.value, item.id.value, item.title, item.description, item.priority));
     return item;
   }
 

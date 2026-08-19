@@ -17,6 +17,6 @@ export async function persistAndPublish(
     await unitOfWork.rollback();
     throw error;
   }
-  eventBus.publish(list.domainEvents);
+  await eventBus.publish(list.domainEvents);
   list.clearEvents();
 }
