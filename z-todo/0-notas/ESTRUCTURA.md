@@ -1,6 +1,8 @@
 # Estructura del proyecto — z-todo
 
-Ejemplo de **DDD + Clean/Hexagonal Architecture** implementado en TypeScript puro (sin framework), organizando un dominio de "listas de tareas" en 4 capas concéntricas numeradas por orden de dependencia.
+Ejemplo de **DDD + Clean/Hexagonal Architecture + CQRS** implementado en TypeScript puro (sin framework), organizando un dominio de "listas de tareas" en 4 capas concéntricas numeradas por orden de dependencia.
+
+El CQRS es real, no solo naming: hay un modelo de **escritura** (`TodoList`, el aggregate, con todas sus reglas de negocio) y un modelo de **lectura** separado (`TodoListReadModel`, plano y ya calculado), viviendo en stores distintos, sincronizados por un proyector que escucha los domain events. Detalle completo en `CAMBIOS-CQRS.md`.
 
 ## Regla de dependencia
 
@@ -42,7 +44,7 @@ Cada evento implementa `DomainEvent` (`eventName: string`, `occurredOn: Date`) y
 |---|---|
 | `TodoListCreated` | `TodoList.create` |
 | `TodoListDeleted` | `DeleteTodoListInteractor` (no por el aggregate — ver nota abajo) |
-| `TodoItemAdded` | `TodoList.addItem` |
+| `TodoItemAdded` | `TodoList.addItem` (lleva `title`, `description` y `priority` — necesarios para que el read model pueda reconstruir el item completo sin ir a buscarlo a otro lado) |
 | `TodoItemCompleted` | `TodoList.completeItem` |
 | `TodoItemRenamed` | `TodoList.renameItem` |
 | `TodoItemDescriptionChanged` | `TodoList.changeItemDescription` |
@@ -55,7 +57,7 @@ Cada evento implementa `DomainEvent` (`eventName: string`, `occurredOn: Date`) y
 - **`TodoListNotFoundException.ts`** / **`TodoItemNotFoundException.ts`** — excepciones tipadas para los 2 casos de "no encontrado". Permiten a un presenter real (`instanceof`) diferenciar 404 de otros errores, aunque hoy los presenters no lo hacen.
 
 ### `services/`
-- **`TodoListDomainService.ts`** — lógica que no pertenece a una sola entidad: `calculateCompletionPercentage(list)` y `isFullyCompleted(list)`. Usado por `GetTodoListInteractor` y `ListTodoListsInteractor`.
+- **`TodoListDomainService.ts`** — lógica que no pertenece a una sola entidad: `calculateCompletionPercentage(items)` y `isFullyCompleted(items)`. Deliberadamente desacoplado de `TodoList` — opera sobre cualquier `{ status: string }[]`, no sobre el aggregate. Esto permite que lo use tanto el dominio como `TodoListProjector` (2-application), que solo tiene items planos del read model, no entidades `TodoItem`.
 
 ---
 
@@ -64,8 +66,9 @@ Cada evento implementa `DomainEvent` (`eventName: string`, `occurredOn: Date`) y
 Orquesta el dominio. Define **qué** puede hacer el sistema (casos de uso) y **qué necesita del exterior** (ports), sin saber cómo se implementa nada de eso.
 
 ### `ports/out/` — Interfaces de salida (lo que la aplicación necesita, implementado en infraestructura)
-- **`TodoListRepositoryPort.ts`** — `save`, `findById`, `findAll`, `delete`.
-- **`EventBusPort.ts`** — `publish(events)`, `subscribe(eventName, handler)`.
+- **`TodoListRepositoryPort.ts`** — `save`, `findById`, `findAll`, `delete`. Lado de **escritura** — trabaja con el aggregate `TodoList` completo.
+- **`TodoListReadModelPort.ts`** — `findById`, `findAll` (para las queries) + `upsert`, `remove` (solo para el proyector). Lado de **lectura** — trabaja con `TodoListReadModel`, una forma plana y ya calculada, no con el aggregate.
+- **`EventBusPort.ts`** — `publish(events): Promise<void>`, `subscribe(eventName, handler)`. `publish` es `async` a propósito: quien publica espera a que todos los handlers (incluido el proyector) terminen antes de seguir, para que no haya una ventana donde el read model esté desactualizado.
 - **`UnitOfWorkPort.ts`** — `begin`, `commit`, `rollback`. Abstrae la noción de transacción.
 
 ### `use-cases/` — Un caso de uso = 5 archivos, siempre el mismo patrón (Clean Architecture "Input/Output Boundary")
@@ -94,15 +97,19 @@ El interactor nunca hace `return` — llama a `output.presentSuccess(...)` o `ou
 | `change-todo-item-priority` | Cambia la prioridad de un item |
 | `delete-todo-list` | Borra una lista |
 
-**Queries** (`use-cases/query/`) — solo leen, no usan `UnitOfWorkPort` ni `EventBusPort`:
+**Queries** (`use-cases/query/`) — no usan `UnitOfWorkPort`, `EventBusPort` ni `TodoListRepositoryPort`. Leen directo de `TodoListReadModelPort`, tipado como `Pick<TodoListReadModelPort, 'findById'>` / `'findAll'>` — el tipo del constructor bloquea en compile-time que una query pueda llamar `upsert`/`remove`:
 
 | Caso de uso | Qué hace |
 |---|---|
-| `get-todo-list` | Trae una lista por id, con `completionPercentage`/`isFullyCompleted` calculados |
-| `list-todo-lists` | Trae todas las listas, mismo shape que `get-todo-list` por cada una |
+| `get-todo-list` | Trae una lista por id del read model — `completionPercentage`/`isFullyCompleted` ya vienen calculados, no se recalculan acá |
+| `list-todo-lists` | Trae todas las listas del read model, mismo shape que `get-todo-list` por cada una |
+
+### `read-model/` — el lado de lectura de CQRS
+- **`TodoListReadModel.ts`** — tipos `TodoListReadModel`/`TodoItemReadModel`. Forma plana y desnormalizada, pensada para leer barato — sin VOs, sin métodos, con `completionPercentage`/`isFullyCompleted` guardados como campos (no derivados en el momento de leer).
+- **`TodoListProjector.ts`** — el único escritor del read model. Se suscribe a los 7 domain events (`subscribeTo(eventBus)`) y mantiene `TodoListReadModel` al día: crea la entrada en `TodoListCreated`, la borra en `TodoListDeleted`, agrega/actualiza items en el resto. Recalcula `completionPercentage`/`isFullyCompleted` con `TodoListDomainService` cada vez que un item cambia.
 
 ### `shared/` — código compartido entre interactores (no es un caso de uso en sí)
-- **`persistAndPublish.ts`** — extrae el boilerplate repetido en los 6 comandos que mutan un aggregate: `unitOfWork.begin()` → `repository.save(list)` → `unitOfWork.commit()` (o `rollback()` + re-throw si falla) → `eventBus.publish(list.domainEvents)` → `list.clearEvents()`. Cada interactor lo llama en una línea después de mutar el aggregate.
+- **`persistAndPublish.ts`** — extrae el boilerplate repetido en los 6 comandos que mutan un aggregate: `unitOfWork.begin()` → `repository.save(list)` → `unitOfWork.commit()` (o `rollback()` + re-throw si falla) → `await eventBus.publish(list.domainEvents)` (esto es lo que dispara al proyector y actualiza el read model) → `list.clearEvents()`. Cada interactor lo llama en una línea después de mutar el aggregate.
 - **`testing/capturePresenter.ts`** — fábrica de un `OutputBoundary` falso para tests. `capture<TOutput>()` devuelve `{ presenter, state }`: `presenter` se le pasa al interactor (cumple la interface por duck typing), `state` es donde queda guardado el resultado para hacer `assert` después. Nunca se importa desde código de producción.
 
 ---
@@ -111,8 +118,9 @@ El interactor nunca hace `return` — llama a `output.presentSuccess(...)` o `ou
 
 Implementaciones concretas de los ports. Todas en memoria (`Map`/`Array`) porque es un ejemplo — en un sistema real acá irían Postgres, Redis, RabbitMQ, etc.
 
-- **`persistence/InMemoryTodoListRepository.ts`** — implementa `TodoListRepositoryPort` con un `Map<string, TodoList>`.
-- **`messaging/InMemoryEventBus.ts`** — implementa `EventBusPort` con un `Map<eventName, handler[]>`. `publish` recorre y ejecuta handlers sincrónicamente, sin colas.
+- **`persistence/InMemoryTodoListRepository.ts`** — implementa `TodoListRepositoryPort` con un `Map<string, TodoList>`. El store de **escritura**.
+- **`persistence/InMemoryTodoListReadModelRepository.ts`** — implementa `TodoListReadModelPort` con otro `Map<string, TodoListReadModel>`, completamente separado del anterior. El store de **lectura**.
+- **`messaging/InMemoryEventBus.ts`** — implementa `EventBusPort` con un `Map<eventName, handler[]>`. `publish` es `async` y espera (`await`) cada handler antes de pasar al siguiente — sin esto, el proyector (que hace `await` internamente) podría no haber terminado de actualizar el read model cuando el comando ya devolvió el control.
 - **`unit-of-work/InMemoryUnitOfWork.ts`** — implementa `UnitOfWorkPort` con métodos no-op (`begin`/`commit`/`rollback` no hacen nada real, porque no hay una BD transaccional detrás).
 
 ---
@@ -131,7 +139,7 @@ Un presenter por caso de uso, implementa el `OutputBoundary` correspondiente. To
 `CreateTodoListRequest.ts` y `AddTodoItemRequest.ts` — DTOs pensados para desacoplar "lo que llega por HTTP" de "lo que necesita la aplicación". Solo `CreateTodoListRequest` se usa de verdad (en `controller.create`); `AddTodoItemRequest` quedó sin conectar — el resto de los métodos del controller reciben el `Input` de aplicación directo. Asimetría conocida, no arreglada.
 
 ### `main.ts`
-El **composition root**: arma toda la cadena de dependencias a mano (repository → event bus → unit of work → interactores → controller), se suscribe a los 7 tipos de evento para loguearlos, y corre un flujo de demostración real: crea una lista, agrega 2 items, completa uno, renombra/cambia descripción/cambia prioridad del otro, consulta la lista, lista todas las listas, borra la lista, y vuelve a listar para confirmar que quedó vacía.
+El **composition root**: arma toda la cadena de dependencias a mano — lado de escritura (`repository` → `eventBus` → `unitOfWork`), lado de lectura (`readModelRepository` → `TodoListProjector`, suscripto al mismo `eventBus` con `projector.subscribeTo(eventBus)`) — más los 7 `eventBus.subscribe(...)` que solo loguean para que se vea el flujo. Las queries (`getTodoList`, `listTodoLists`) se instancian con `readModelRepository`, no con `repository`. Corre un flujo de demostración real: crea una lista, agrega 2 items, completa uno, renombra/cambia descripción/cambia prioridad del otro, consulta la lista, lista todas las listas, borra la lista, y vuelve a listar para confirmar que quedó vacía — todo leído del read model, nunca del aggregate de escritura.
 
 Se ejecuta con:
 ```bash
@@ -142,13 +150,13 @@ pnpm dlx tsx core/4-generic-implementation/main.ts
 
 ## Tests
 
-`node:test` nativo (cero frameworks de testing como dependencia) + `tsx` como loader de TypeScript. 24 tests cubriendo los 9 interactores — camino feliz, cada excepción de dominio, publicación de cada evento, y algún caso de fallo de infraestructura (rollback si el `save` explota).
+`node:test` nativo (cero frameworks de testing como dependencia) + `tsx` como loader de TypeScript. 27 tests: los 9 interactores (camino feliz, cada excepción de dominio, publicación de cada evento, algún caso de fallo de infraestructura con rollback) más `TodoListProjector.test.ts`, que alimenta eventos reales del aggregate y verifica que el read model queda proyectado bien — incluyendo el caso "evento de un item para una lista que no está en el read model" (no debe explotar, solo ignorar).
 
 ```bash
 pnpm test
 ```
 
-Los fakes usados en los tests **son las implementaciones reales de infraestructura** (`InMemoryTodoListRepository`, `InMemoryEventBus`, `InMemoryUnitOfWork`) — no hace falta mockear nada porque ya son livianas y deterministas.
+Los fakes usados en los tests **son las implementaciones reales de infraestructura** (`InMemoryTodoListRepository`, `InMemoryTodoListReadModelRepository`, `InMemoryEventBus`, `InMemoryUnitOfWork`) — no hace falta mockear nada porque ya son livianas y deterministas. Los tests de `GetTodoListInteractor`/`ListTodoListsInteractor` siembran el read model directo con `readModel.upsert(...)` — no dependen del proyector ni del aggregate de escritura, ese camino ya lo cubre `TodoListProjector.test.ts` por separado.
 
 ---
 
@@ -157,6 +165,7 @@ Los fakes usados en los tests **son las implementaciones reales de infraestructu
 - **`todo-module.ts`** — versión "de un solo archivo" del mismo dominio, todo junto sin separar en carpetas. Es el borrador/scratch original a partir del cual se armó la versión en capas. No se mantiene sincronizado con `core/`.
 - **`doc.md`** — lista corta de entidades/VOs del dominio, esbozo inicial.
 - **`notas.md`** — bitácora de cuando se configuró TypeScript en el proyecto (faltaban `typescript`, `@types/node`, `tsconfig.json`).
+- **`CAMBIOS-CQRS.md`** — explicación paso a paso, con analogías, de cómo se armó el read model separado (`read-model/`, `TodoListReadModelPort`, `TodoListProjector`) y los 2 bugs que hubo que arreglar en el camino (`TodoItemAdded` incompleto, `EventBusPort` no-async).
 - **`package.json`** — `main: "index.js"` sigue apuntando a un archivo que no existe (nunca se compiló a `dist/`). Pendiente, no resuelto.
 
 ---
@@ -166,3 +175,4 @@ Los fakes usados en los tests **son las implementaciones reales de infraestructu
 1. **DTOs de transporte asimétricos** — solo `create-todo-list` pasa por un `Request` DTO propio; el resto de los métodos del controller usan el `Input` de aplicación directo.
 2. **`main: "index.js"`** en `package.json` no existe (no hay build a `dist/` configurado).
 3. Sin capa HTTP real — `4-generic-implementation` es wiring en memoria, no un servidor.
+4. **Todo en memoria — la consistencia entre write/read model es "gratis" acá y no lo sería con una BD real.** `InMemoryEventBus.publish` espera (`await`) cada handler antes de devolver el control, así que el read model siempre está al día cuando un comando termina. Con un event bus real (Kafka, RabbitMQ, SQS) o incluso con Postgres sin cuidado extra, hay una ventana real de *eventual consistency* — un `GET` justo después de un `POST` puede devolver datos viejos. Ver `CAMBIOS-CQRS.md` para el detalle de las opciones (misma transacción, outbox, etc) si esto se migra a una base real.
