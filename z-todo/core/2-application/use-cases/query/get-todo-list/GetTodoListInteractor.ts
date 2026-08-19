@@ -1,28 +1,34 @@
 import { GetTodoListUseCase } from './GetTodoListUseCase';
 import { GetTodoListInput } from './GetTodoListInput';
 import { GetTodoListOutputBoundary } from './GetTodoListOutputBoundary';
-import { TodoListReadModelPort } from '../../../ports/out/TodoListReadModelPort';
+import { TodoListRepositoryPort } from '../../../ports/out/TodoListRepositoryPort';
+import { TodoListId } from '../../../../1-domain/value-objects/TodoListId';
 import { TodoListNotFoundException } from '../../../../1-domain/exceptions/TodoListNotFoundException';
 import { GetTodoListOutput } from './GetTodoListOutput';
+import { TodoListDomainService } from '../../../../1-domain/services/TodoListDomainService';
 
 export class GetTodoListInteractor implements GetTodoListUseCase {
-    constructor(
-        private readonly readModel: Pick<TodoListReadModelPort, 'findById'>,
-    ) { }
+    constructor(private readonly repository: TodoListRepositoryPort) { }
 
     async execute(input: GetTodoListInput, output: GetTodoListOutputBoundary): Promise<void> {
         try {
-            const list = await this.readModel.findById(input.listId);
+            const list = await this.repository.findById(TodoListId.from(input.listId));
             if (!list) {
                 throw new TodoListNotFoundException(input.listId);
             }
 
             const todoListOutput: GetTodoListOutput = {
-                id: list.id,
+                id: list.id.value,
                 name: list.name,
-                completionPercentage: list.completionPercentage,
-                isFullyCompleted: list.isFullyCompleted,
-                items: list.items.map(item => ({ ...item })),
+                completionPercentage: TodoListDomainService.calculateCompletionPercentage(list.items),
+                isFullyCompleted: TodoListDomainService.isFullyCompleted(list.items),
+                items: list.items.map(item => ({
+                    id: item.id.value,
+                    title: item.title,
+                    description: item.description,
+                    status: item.status,
+                    priority: item.priority,
+                })),
             };
             output.presentSuccess(todoListOutput);
         } catch (error) {

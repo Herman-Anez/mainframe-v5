@@ -1,23 +1,28 @@
 import { ListTodoListsUseCase } from './ListTodoListsUseCase';
 import { ListTodoListsInput } from './ListTodoListsInput';
 import { ListTodoListsOutputBoundary } from './ListTodoListsOutputBoundary';
-import { TodoListReadModelPort } from '../../../ports/out/TodoListReadModelPort';
+import { TodoListRepositoryPort } from '../../../ports/out/TodoListRepositoryPort';
 import { GetTodoListOutput } from '../get-todo-list/GetTodoListOutput';
+import { TodoListDomainService } from '../../../../1-domain/services/TodoListDomainService';
 
 export class ListTodoListsInteractor implements ListTodoListsUseCase {
-  constructor(
-    private readonly readModel: Pick<TodoListReadModelPort, 'findAll'>,
-  ) {}
+  constructor(private readonly repository: TodoListRepositoryPort) {}
 
   async execute(_input: ListTodoListsInput, output: ListTodoListsOutputBoundary): Promise<void> {
     try {
-      const lists = await this.readModel.findAll();
+      const lists = await this.repository.findAll();
       const result: GetTodoListOutput[] = lists.map(list => ({
-        id: list.id,
+        id: list.id.value,
         name: list.name,
-        completionPercentage: list.completionPercentage,
-        isFullyCompleted: list.isFullyCompleted,
-        items: list.items.map(item => ({ ...item })),
+        completionPercentage: TodoListDomainService.calculateCompletionPercentage(list.items),
+        isFullyCompleted: TodoListDomainService.isFullyCompleted(list.items),
+        items: list.items.map(item => ({
+          id: item.id.value,
+          title: item.title,
+          description: item.description,
+          status: item.status,
+          priority: item.priority,
+        })),
       }));
 
       output.presentSuccess({ lists: result });

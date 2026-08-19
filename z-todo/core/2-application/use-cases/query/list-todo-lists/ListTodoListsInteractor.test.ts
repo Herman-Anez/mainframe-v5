@@ -2,12 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ListTodoListsInteractor } from './ListTodoListsInteractor';
 import { ListTodoListsOutput } from './ListTodoListsOutput';
-import { InMemoryTodoListReadModelRepository } from '../../../../3-infrastructure/persistence/InMemoryTodoListReadModelRepository';
+import { TodoList } from '../../../../1-domain/entities/TodoList';
+import { InMemoryTodoListRepository } from '../../../../3-infrastructure/persistence/InMemoryTodoListRepository';
 import { capture } from '../../../shared/testing/capturePresenter';
 
 test('ListTodoListsInteractor devuelve un array vacío si no hay listas', async () => {
-  const readModel = new InMemoryTodoListReadModelRepository();
-  const interactor = new ListTodoListsInteractor(readModel);
+  const repository = new InMemoryTodoListRepository();
+  const interactor = new ListTodoListsInteractor(repository);
 
   const { presenter, state } = capture<ListTodoListsOutput>();
   await interactor.execute({}, presenter);
@@ -16,35 +17,31 @@ test('ListTodoListsInteractor devuelve un array vacío si no hay listas', async 
   assert.deepEqual(state.success?.lists, []);
 });
 
-test('ListTodoListsInteractor devuelve todas las listas ya proyectadas', async () => {
-  const readModel = new InMemoryTodoListReadModelRepository();
-  await readModel.upsert({
-    id: 'list-a',
-    name: 'Compras',
-    completionPercentage: 100,
-    isFullyCompleted: true,
-    items: [{ id: 'item-1', title: 'Comprar leche', description: '', status: 'COMPLETED', priority: 'MEDIUM' }],
-  });
-  await readModel.upsert({
-    id: 'list-b',
-    name: 'Pendientes',
-    completionPercentage: 0,
-    isFullyCompleted: false,
-    items: [],
-  });
+test('ListTodoListsInteractor devuelve todas las listas con su completionPercentage', async () => {
+  const repository = new InMemoryTodoListRepository();
 
-  const interactor = new ListTodoListsInteractor(readModel);
+  const listA = TodoList.create('Compras');
+  const item = listA.addItem('Comprar leche');
+  listA.completeItem(item.id.value);
+  listA.clearEvents();
+  await repository.save(listA);
+
+  const listB = TodoList.create('Pendientes');
+  listB.clearEvents();
+  await repository.save(listB);
+
+  const interactor = new ListTodoListsInteractor(repository);
   const { presenter, state } = capture<ListTodoListsOutput>();
   await interactor.execute({}, presenter);
 
   assert.equal(state.error, undefined);
   assert.equal(state.success?.lists.length, 2);
 
-  const foundA = state.success?.lists.find(l => l.id === 'list-a');
+  const foundA = state.success?.lists.find(l => l.id === listA.id.value);
   assert.equal(foundA?.completionPercentage, 100);
   assert.equal(foundA?.isFullyCompleted, true);
 
-  const foundB = state.success?.lists.find(l => l.id === 'list-b');
+  const foundB = state.success?.lists.find(l => l.id === listB.id.value);
   assert.equal(foundB?.completionPercentage, 0);
   assert.equal(foundB?.isFullyCompleted, false);
 });
