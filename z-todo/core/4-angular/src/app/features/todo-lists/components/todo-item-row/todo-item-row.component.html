@@ -1,0 +1,27 @@
+<td>
+  @if (editingTitle) {
+    <input type="text" [(ngModel)]="titleDraft" (blur)="submitTitle()" (keyup.enter)="submitTitle()" autofocus />
+  } @else {
+    <span (click)="startEditTitle()" class="editable">{{ item.title }}</span>
+  }
+</td>
+<td>
+  @if (editingDescription) {
+    <input type="text" [(ngModel)]="descriptionDraft" (blur)="submitDescription()" (keyup.enter)="submitDescription()" autofocus />
+  } @else {
+    <span (click)="startEditDescription()" class="editable">{{ item.description || '—' }}</span>
+  }
+</td>
+<td>
+  <select [ngModel]="item.priority" (ngModelChange)="onPriorityChange($event)">
+    @for (p of priorities; track p) {
+      <option [value]="p">{{ p }}</option>
+    }
+  </select>
+</td>
+<td>{{ item.status }}</td>
+<td>
+  @if (!isCompleted) {
+    <button type="button" (click)="complete.emit()">Complete</button>
+  }
+</td>

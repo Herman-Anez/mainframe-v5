@@ -2,7 +2,6 @@ import { TodoList } from '../../1-domain/entities/TodoList';
 import { TodoListId } from '../../1-domain/value-objects/TodoListId';
 import { TodoListRepositoryPort } from '../../2-application/ports/out/TodoListRepositoryPort';
 
-
 export class InMemoryTodoListRepository implements TodoListRepositoryPort {
     private readonly store = new Map<string, TodoList>();
 

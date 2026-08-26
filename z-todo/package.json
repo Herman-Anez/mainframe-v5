@@ -4,7 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "tsx --test core/**/*.test.ts"
+    "test": "tsx --test $(find core -name '*.test.ts')",
+    "test:cqrs": "tsx --test $(find core-cqrs -name '*.test.ts')",
+    "start:angular": "pnpm --filter ./core/4-angular start",
+    "build:angular": "pnpm --filter ./core/4-angular build"
   },
   "keywords": [],
   "author": "",

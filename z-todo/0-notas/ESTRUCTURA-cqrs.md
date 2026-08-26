@@ -1,8 +1,14 @@
-# Estructura del proyecto — z-todo
+# Estructura del proyecto — z-todo (versión CQRS)
 
-Ejemplo de **DDD + Clean/Hexagonal Architecture + CQRS** implementado en TypeScript puro (sin framework), organizando un dominio de "listas de tareas" en 4 capas concéntricas numeradas por orden de dependencia.
+Ejemplo de **DDD + Clean/Hexagonal Architecture + CQRS** implementado en TypeScript puro (sin framework), organizando un dominio de "listas de tareas" en 4 capas concéntricas numeradas por orden de dependencia. Vive en `core-cqrs/`.
 
 El CQRS es real, no solo naming: hay un modelo de **escritura** (`TodoList`, el aggregate, con todas sus reglas de negocio) y un modelo de **lectura** separado (`TodoListReadModel`, plano y ya calculado), viviendo en stores distintos, sincronizados por un proyector que escucha los domain events. Detalle completo en `CAMBIOS-CQRS.md`.
+
+Este proyecto tiene **dos versiones en paralelo**, para comparar:
+- **`core-cqrs/`** (este documento) — la descrita acá.
+- **`core/`** — CQS: mismos comandos, pero las 2 queries leen directo del `TodoListRepositoryPort` (el aggregate de escritura), sin read model propio. Documentado en `ESTRUCTURA-cqs.md`.
+
+`core-cqrs/` quedó congelada como snapshot — es una copia exacta del estado del proyecto en el momento en que se implementó el read model, antes del split. Los cambios posteriores (si los hay) solo se aplican a `core/`.
 
 ## Regla de dependencia
 
@@ -143,7 +149,7 @@ El **composition root**: arma toda la cadena de dependencias a mano — lado de 
 
 Se ejecuta con:
 ```bash
-pnpm dlx tsx core/4-generic-implementation/main.ts
+pnpm exec tsx core-cqrs/4-generic-implementation/main.ts
 ```
 
 ---
@@ -153,7 +159,7 @@ pnpm dlx tsx core/4-generic-implementation/main.ts
 `node:test` nativo (cero frameworks de testing como dependencia) + `tsx` como loader de TypeScript. 27 tests: los 9 interactores (camino feliz, cada excepción de dominio, publicación de cada evento, algún caso de fallo de infraestructura con rollback) más `TodoListProjector.test.ts`, que alimenta eventos reales del aggregate y verifica que el read model queda proyectado bien — incluyendo el caso "evento de un item para una lista que no está en el read model" (no debe explotar, solo ignorar).
 
 ```bash
-pnpm test
+pnpm test:cqrs
 ```
 
 Los fakes usados en los tests **son las implementaciones reales de infraestructura** (`InMemoryTodoListRepository`, `InMemoryTodoListReadModelRepository`, `InMemoryEventBus`, `InMemoryUnitOfWork`) — no hace falta mockear nada porque ya son livianas y deterministas. Los tests de `GetTodoListInteractor`/`ListTodoListsInteractor` siembran el read model directo con `readModel.upsert(...)` — no dependen del proyector ni del aggregate de escritura, ese camino ya lo cubre `TodoListProjector.test.ts` por separado.
@@ -162,11 +168,8 @@ Los fakes usados en los tests **son las implementaciones reales de infraestructu
 
 ## Archivos sueltos en la raíz
 
-- **`todo-module.ts`** — versión "de un solo archivo" del mismo dominio, todo junto sin separar en carpetas. Es el borrador/scratch original a partir del cual se armó la versión en capas. No se mantiene sincronizado con `core/`.
-- **`doc.md`** — lista corta de entidades/VOs del dominio, esbozo inicial.
-- **`notas.md`** — bitácora de cuando se configuró TypeScript en el proyecto (faltaban `typescript`, `@types/node`, `tsconfig.json`).
-- **`CAMBIOS-CQRS.md`** — explicación paso a paso, con analogías, de cómo se armó el read model separado (`read-model/`, `TodoListReadModelPort`, `TodoListProjector`) y los 2 bugs que hubo que arreglar en el camino (`TodoItemAdded` incompleto, `EventBusPort` no-async).
-- **`package.json`** — `main: "index.js"` sigue apuntando a un archivo que no existe (nunca se compiló a `dist/`). Pendiente, no resuelto.
+- **`0-notas/`** — toda la documentación de la sesión: `ESTRUCTURA-cqs.md` (gemelo para `core/`), este archivo, `CAMBIOS-CQRS.md`, `CONVERSACION.md`, `doc.md`, `notas.md`.
+- **`package.json`** — `"test:cqrs"` corre los tests de `core-cqrs/`, `"test"` corre los de `core/` (CQS). `main: "index.js"` sigue apuntando a un archivo que no existe (nunca se compiló a `dist/`). Pendiente, no resuelto.
 
 ---
 
@@ -176,3 +179,4 @@ Los fakes usados en los tests **son las implementaciones reales de infraestructu
 2. **`main: "index.js"`** en `package.json` no existe (no hay build a `dist/` configurado).
 3. Sin capa HTTP real — `4-generic-implementation` es wiring en memoria, no un servidor.
 4. **Todo en memoria — la consistencia entre write/read model es "gratis" acá y no lo sería con una BD real.** `InMemoryEventBus.publish` espera (`await`) cada handler antes de devolver el control, así que el read model siempre está al día cuando un comando termina. Con un event bus real (Kafka, RabbitMQ, SQS) o incluso con Postgres sin cuidado extra, hay una ventana real de *eventual consistency* — un `GET` justo después de un `POST` puede devolver datos viejos. Ver `CAMBIOS-CQRS.md` para el detalle de las opciones (misma transacción, outbox, etc) si esto se migra a una base real.
+5. **Congelada respecto a `core/`** — si `core/` sigue evolucionando (nuevos casos de uso, fixes), esta carpeta no los recibe a menos que se porten a mano. No hay ningún mecanismo que las mantenga sincronizadas.
