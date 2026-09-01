@@ -1,7 +1,7 @@
 import { TodoUseCases } from '../../2-application/use-cases/TodoUseCases';
-import { TodoListControllerPort } from './TodoListControllerPort';
-import { CreateTodoListRequest } from './dtos/CreateTodoListRequest';
-import { AddTodoItemRequest } from './dtos/AddTodoItemRequest';
+import { TodoListControllerPort } from '../../2-application/use-cases-ports/backend/TodoListControllerPort';
+import { CreateTodoListRequest } from '../../2-application/use-cases-ports/backend/dtos/CreateTodoListRequest';
+import { AddTodoItemRequest } from '../../2-application/use-cases-ports/backend/dtos/AddTodoItemRequest';
 import { CreateTodoListOutputBoundary } from '../../2-application/use-cases/commands/create-todo-list/CreateTodoListOutputBoundary';
 import { AddTodoItemOutputBoundary } from '../../2-application/use-cases/commands/add-todo-item/AddTodoItemOutputBoundary';
 import { CompleteTodoItemInput } from '../../2-application/use-cases/commands/complete-todo-item/CompleteTodoItemInput';

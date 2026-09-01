@@ -11,7 +11,7 @@ import { ListTodoListsUseCase } from './query/list-todo-lists/ListTodoListsUseCa
 /**
  * Único bundle de los 9 casos de uso del módulo. Fuente de verdad
  * compartida entre TodoListController (3-adapters/backend) y las rutas
- * HTTP (3-adapters/http/routes.ts) — antes cada uno tenía su propia copia
+ * HTTP (2-application/use-cases-ports/http/routes.ts) — antes cada uno tenía su propia copia
  * de esta misma lista de 9 campos.
  */
 export interface TodoUseCases {

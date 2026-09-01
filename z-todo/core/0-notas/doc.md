@@ -122,7 +122,7 @@ DDD trata al repositorio como parte del **lenguaje del dominio** aunque su imple
 
 ## Cómo se orquesta desde afuera del dominio
 
-El dominio no conoce casos de uso, controllers ni presenters — esos son responsabilidad de `2-application/`, `3-adapters/backend/`/`3-adapters/http/` (adapters de entrada, agnósticos a transporte) y los frames (`5-generic-implementation/`, `5-angular/`). En resumen: un **interactor** (caso de uso) carga el aggregate vía el repositorio, le pide que ejecute un comportamiento (`list.addItem(...)`), lo persiste, y publica los eventos que quedaron en su buffer. Detalle completo, con toda la capa de aplicación, en `ESTRUCTURA-cqs.md` (o `ESTRUCTURA-cqrs.md` si te interesa la variante con read model).
+El dominio no conoce casos de uso, controllers ni presenters — esos son responsabilidad de `2-application/` (incluye el puerto entrante `use-cases-ports/http/`), `3-adapters/backend/` (adapter de entrada, agnóstico a transporte) y los frames (`5-generic-implementation/`, `5-angular/`). En resumen: un **interactor** (caso de uso) carga el aggregate vía el repositorio, le pide que ejecute un comportamiento (`list.addItem(...)`), lo persiste, y publica los eventos que quedaron en su buffer. Detalle completo, con toda la capa de aplicación, en `ESTRUCTURA-cqs.md` (o `ESTRUCTURA-cqrs.md` si te interesa la variante con read model).
 
 ---
 
