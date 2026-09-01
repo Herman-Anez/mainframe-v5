@@ -9,6 +9,8 @@
  * conecta a las rutas reales de Express/Fastify/etc.
  */
 
+import { UseCase } from '../../shared/UseCase';
+
 export type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
 
 /**
@@ -22,35 +24,23 @@ export interface HttpRequestData {
 }
 
 /**
- * Mismo shape que los *OutputBoundary.ts de 2-application (presentSuccess/
- * presentError) — definido de nuevo acá, sin importar ninguno de los 9
- * concretos, porque esta capa no debería depender de cuáles existen.
- */
-export interface OutputBoundaryLike<TOutput> {
-  presentSuccess(output: TOutput): void;
-  presentError(error: Error): void;
-}
-
-/**
- * Lo mínimo que necesitamos de un caso de uso: poder ejecutarlo. Cualquier
- * XxxUseCase de 2-application cumple esto tal cual, sin adaptar nada.
- */
-export interface UseCaseLike<TInput, TOutput> {
-  execute(input: TInput, output: OutputBoundaryLike<TOutput>): Promise<void>;
-}
-
-/**
  * Un endpoint, descripto como datos puros. No es código que corre nada por
  * sí solo — es la receta que un binder interpreta.
  */
 export interface RouteDescriptor<TInput = unknown, TOutput = unknown> {
   method: HttpMethod;
   path: string;
-  /** Arma el Input del caso de uso a partir de params/query/body del request. */
+  /**
+   * Arma el Input del caso de uso a partir de params/query/body del request.
+   * Puede lanzar `RequestValidationError` (ver `httpValidation.ts`) si falta
+   * un campo obligatorio o viene con el tipo equivocado — el binder debe
+   * envolver `buildInput` + `useCase.execute` en un try y rutear el error
+   * por `errorStatus`.
+   */
   buildInput: (request: HttpRequestData) => TInput;
-  useCase: UseCaseLike<TInput, TOutput>;
+  useCase: UseCase<TInput, TOutput>;
   /** Código HTTP a devolver cuando el caso de uso termina con éxito. */
   successStatus: number;
-  /** Traduce una excepción (de dominio o no) a un código HTTP. */
+  /** Traduce una excepción (de dominio, de validación de request, o cualquiera) a un código HTTP. */
   errorStatus: (error: Error) => number;
 }

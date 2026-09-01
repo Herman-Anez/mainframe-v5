@@ -1,11 +1,8 @@
+import { OutputBoundary } from "../../../2-application/shared/OutputBoundary";
 import { CreateTodoListOutput } from "../../../2-application/use-cases/commands/create-todo-list/CreateTodoListOutput";
-import { CreateTodoListOutputBoundary } from "../../../2-application/use-cases/commands/create-todo-list/CreateTodoListOutputBoundary";
 
-
-export class CreateTodoListPresenter implements CreateTodoListOutputBoundary {
+export class CreateTodoListPresenter implements OutputBoundary<CreateTodoListOutput> {
     result: CreateTodoListOutput | undefined;
-
-    constructor() { }
 
     presentSuccess(output: CreateTodoListOutput): void {
         this.result = output;

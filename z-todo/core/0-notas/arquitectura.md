@@ -30,7 +30,7 @@ Las dos dicen lo mismo con dibujos distintos: **la lógica de negocio no puede d
 - **Controller** — recibe una petición del mundo exterior y llama al use case correspondiente con el input armado. Acá: `TodoListController` (`3-adapters/backend/`) `implements TodoListControllerPort` (`2-application/use-cases-ports/backend/`) — interfaz separada de su implementación, mismo patrón que el repositorio pero del lado de entrada.
 - **Presenter** — recibe el resultado de un use case (vía el Output Boundary) y decide cómo mostrarlo — consola, HTTP, UI. Acá: cada `*Presenter.ts` (`5-generic-implementation/`).
 - **Gateway / Repository** — el nombre que se le da al adapter que sabe hablar con almacenamiento persistente. Acá: `InMemoryTodoListRepository` (y su port, `TodoListRepositoryPort`).
-- **Frameworks & Drivers** (capa más externa) — bases de datos reales, frameworks web, UI — todo lo 100% intercambiable. Acá: `5-generic-implementation/` (consola), `5-angular/` (SPA real).
+- **Frameworks & Drivers** (capa más externa) — bases de datos reales, frameworks web, UI — todo lo 100% intercambiable. Acá: `5-generic-implementation/` (consola).
 - **Composition Root** — el único lugar del código donde se decide qué adapter concreto usar y se arma toda la cadena de dependencias a mano. Acá: `main.ts`.
 - **Dependency Inversion Principle (DIP)** — el truco que invierte la flecha de dependencia: en vez de que la aplicación importe infraestructura, la aplicación define una interfaz y es infraestructura quien la importa e implementa. Es lo que hace posible que existan los ports.
 - **Humble Object** (bonus, no mencionado antes) — patrón detrás de por qué el `Presenter` es tan tonto (solo `console.log`, sin lógica): separás a propósito el código difícil de testear (formatear para una pantalla real) del código fácil de testear (todo lo demás), para no tener que testear lo difícil.
@@ -53,7 +53,6 @@ En este proyecto, las murallas son carpetas numeradas:
 3-adapters/backend                ← conoce la aplicación, implementa TodoListControllerPort con un Controller genérico (adapter de entrada real).
 4-infrastructure                   ← conoce la aplicación y el dominio, implementa lo que la app PIDE (ports de salida).
 5-generic-implementation ← un pueblo: consola. Conoce todo, arma todo.
-5-angular              ← otro pueblo: una SPA real. Conoce todo, arma todo a su manera.
 ```
 
 `4-infrastructure` y `3-adapters/backend` son parte del mismo tier de adapters — ninguno es un "pueblo" completo, son kits reusables. `2-application/use-cases-ports/backend` y `2-application/use-cases-ports/http` no son adapters: son los contratos del lado entrante, simétricos a `2-application/ports/out/` (los puertos salientes que ya implementa `4-infrastructure`). `use-cases-ports/backend` sí tiene un adapter real (`TodoListController`, en `3-adapters/backend/`); `use-cases-ports/http` todavía no tiene ninguno — es puro contrato sin implementación. Ninguno de estos es un "pueblo" completo — los pueblos (`5-*`) son los que efectivamente corren solos.
@@ -65,7 +64,7 @@ grep -rln "4-infrastructure" core/1-domain core/2-application --include="*.ts"
 # (sin resultados — ni domain ni application importan nada de infraestructura)
 ```
 
-Cero resultados. Ni un solo archivo de `1-domain/` o `2-application/` (fuera de los tests, que son harness de prueba, no código de producción) importa algo de `4-infrastructure/`. Lo mismo vale para `3-adapters/backend/` y `2-application/use-cases-ports/http/` — ninguno de los dos importa `4-infrastructure` ni ningún `5-*` (salvo, de nuevo, tests usando los adapters in-memory como fakes). Las únicas carpetas que sí importan infraestructura y arman todo son `5-generic-implementation/main.ts` y `5-angular/` — los pueblos, armando el castillo cada uno a su manera.
+Cero resultados. Ni un solo archivo de `1-domain/` o `2-application/` (fuera de los tests, que son harness de prueba, no código de producción) importa algo de `4-infrastructure/`. Lo mismo vale para `3-adapters/backend/` y `2-application/use-cases-ports/http/` — ninguno de los dos importa `4-infrastructure` ni ningún `5-*` (salvo, de nuevo, tests usando los adapters in-memory como fakes). La única carpeta que sí importa infraestructura y arma todo es `5-generic-implementation/main.ts` — el pueblo, armando el castillo.
 
 ---
 
@@ -180,7 +179,7 @@ export class InMemoryTodoListRepository implements TodoListRepositoryPort {
 ### Adapters de entrada vs. adapters de salida
 
 - **Adapters de salida** — implementan un port de salida. `InMemoryTodoListRepository`, `InMemoryEventBus`, `InMemoryUnitOfWork`. Viven en `4-infrastructure/`.
-- **Adapters de entrada** — implementan un port de entrada para que algo de afuera invoque la aplicación a través suyo. `TodoListController` es uno: **llama** a `useCase.execute(...)` en cada método. Vive en `3-adapters/backend/` — mismo tier de adapters que `4-infrastructure`, ninguno es un frame completo: son kits reusables que un frame (`5-generic-implementation`, `5-angular`) importa y completa.
+- **Adapters de entrada** — implementan un port de entrada para que algo de afuera invoque la aplicación a través suyo. `TodoListController` es uno: **llama** a `useCase.execute(...)` en cada método. Vive en `3-adapters/backend/` — mismo tier de adapters que `4-infrastructure`, ninguno es un frame completo: son kits reusables que un frame (`5-generic-implementation`) importa y completa.
 
 Fijate que `TodoListController` **también** tiene su propio port separado — `TodoListControllerPort.ts`, con las 9 firmas, sin lógica — y `class TodoListController implements TodoListControllerPort`. Mismo patrón exacto que `InMemoryTodoListRepository implements TodoListRepositoryPort`, aplicado ahora del lado de entrada: el port vive en `2-application/use-cases-ports/backend/` (junto con `dtos/`), la implementación en `3-adapters/backend/` — igual que `TodoListRepositoryPort` en `ports/out/` e `InMemoryTodoListRepository` en `4-infrastructure/`. Es un port más grueso que los de `AddTodoItemUseCase` etc (agrupa las 9 firmas en una sola fachada en vez de un port por caso de uso), pero mismo rol: el mundo exterior lo invoca para entrar a la aplicación, cualquier otra implementación (un fake de test, una versión que loguee cada llamada) puede sustituir a `TodoListController` sin que quien lo usa se entere. Ver más abajo, Pieza 8.
 
@@ -288,7 +287,7 @@ En cada flecha (`→`), el código de un lado **no conoce el tipo concreto** del
 | — | Ports de entrada | `CreateTodoListUseCase` y los otros 8 `*UseCase.ts`; `TodoListControllerPort` (`2-application/use-cases-ports/backend/`); `RouteDescriptor`+rutas (`2-application/use-cases-ports/http/`) |
 | Interface Adapters | Adapters de entrada | `TodoListController implements TodoListControllerPort` (`3-adapters/backend/`) |
 | Interface Adapters | Adapters de salida | `*Presenter` (`5-generic-implementation/`), `InMemoryTodoListRepository`/`InMemoryEventBus`/`InMemoryUnitOfWork` (`4-infrastructure/`) |
-| Frameworks & Drivers | El mundo exterior, fuera del hexágono | `5-generic-implementation/main.ts` (consola), `5-angular/` (SPA real) |
+| Frameworks & Drivers | El mundo exterior, fuera del hexágono | `5-generic-implementation/main.ts` (consola) |
 | Dependency Inversion Principle | (el mecanismo que hace posible los ports) | Interfaces en `2-application/ports/`, implementadas en `4-infrastructure/` |
 
 ---

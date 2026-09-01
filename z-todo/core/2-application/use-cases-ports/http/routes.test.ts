@@ -81,9 +81,9 @@ test('flujo completo simulando requests HTTP, sin ningún servidor real de por m
   const addItemInput = addItemRoute.buildInput(
     fakeRequest({ params: { listId }, body: { title: 'Comprar leche', description: '2 litros', priority: 'HIGH' } }),
   );
-  const added = capture<{ success: boolean }>();
+  const added = capture<{ itemId: string }>();
   await addItemRoute.useCase.execute(addItemInput, added.presenter);
-  assert.equal(added.state.success?.success, true);
+  assert.ok(added.state.success?.itemId);
 
   // GET /lists/:listId
   const getRoute = findRoute(routes, 'GET', '/lists/:listId');
@@ -100,23 +100,24 @@ test('flujo completo simulando requests HTTP, sin ningún servidor real de por m
   const renameInput = renameRoute.buildInput(
     fakeRequest({ params: { listId, itemId }, body: { newTitle: 'Comprar leche deslactosada' } }),
   );
-  const renamed = capture<{ success: boolean }>();
+  const renamed = capture<{ item: { title: string } }>();
   await renameRoute.useCase.execute(renameInput, renamed.presenter);
-  assert.equal(renamed.state.success?.success, true);
+  assert.equal(renamed.state.success?.item.title, 'Comprar leche deslactosada');
 
   // POST /lists/:listId/items/:itemId/complete
   const completeRoute = findRoute(routes, 'POST', '/lists/:listId/items/:itemId/complete');
   const completeInput = completeRoute.buildInput(fakeRequest({ params: { listId, itemId } }));
-  const completed = capture<{ success: boolean }>();
+  const completed = capture<{ item: { status: string } }>();
   await completeRoute.useCase.execute(completeInput, completed.presenter);
-  assert.equal(completed.state.success?.success, true);
+  assert.equal(completed.state.success?.item.status, 'COMPLETED');
 
   // DELETE /lists/:listId
   const deleteRoute = findRoute(routes, 'DELETE', '/lists/:listId');
   const deleteInput = deleteRoute.buildInput(fakeRequest({ params: { listId } }));
-  const deleted = capture<{ success: boolean }>();
+  const deleted = capture<void>();
   await deleteRoute.useCase.execute(deleteInput, deleted.presenter);
-  assert.equal(deleted.state.success?.success, true);
+  assert.equal(deleted.state.settled, 'success');
+  assert.equal(deleteRoute.successStatus, 204);
 
   // GET /lists/:listId de nuevo, ahora tiene que fallar con 404
   const getAfterDelete = capture<unknown>();
@@ -125,17 +126,30 @@ test('flujo completo simulando requests HTTP, sin ningún servidor real de por m
   assert.equal(getRoute.errorStatus(getAfterDelete.state.error!), 404);
 });
 
-test('errorStatus mapea TodoListNotFoundException/TodoItemNotFoundException a 404 y el resto a 400', async () => {
+test('errorStatus: NOT_FOUND→404, VALIDATION de dominio→422, request malformado→400', async () => {
   const routes = createHttpRoutes(buildRealUseCases());
   const getRoute = findRoute(routes, 'GET', '/lists/:listId');
 
+  // Lista inexistente → TodoListNotFoundException (code NOT_FOUND) → 404
   const notFound = capture<unknown>();
   await getRoute.useCase.execute(getRoute.buildInput(fakeRequest({ params: { listId: 'no-existe' } })), notFound.presenter);
   assert.equal(getRoute.errorStatus(notFound.state.error!), 404);
 
   const createRoute = findRoute(routes, 'POST', '/lists');
+
+  // Nombre demasiado corto → ValidationException de dominio (code VALIDATION) → 422
   const invalidName = capture<unknown>();
   await createRoute.useCase.execute(createRoute.buildInput(fakeRequest({ body: { name: 'ab' } })), invalidName.presenter);
   assert.equal(invalidName.state.success, undefined);
-  assert.equal(createRoute.errorStatus(invalidName.state.error!), 400);
+  assert.equal(createRoute.errorStatus(invalidName.state.error!), 422);
+
+  // Body sin `name` → RequestValidationError en buildInput → 400
+  assert.throws(
+    () => createRoute.buildInput(fakeRequest({ body: {} })),
+    (err: Error) => {
+      assert.equal(err.name, 'RequestValidationError');
+      assert.equal(createRoute.errorStatus(err), 400);
+      return true;
+    },
+  );
 });

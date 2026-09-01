@@ -32,7 +32,7 @@ test('ChangeTodoItemDescriptionInteractor cambia la descripción y publica TodoI
   await interactor.execute({ listId: list.id.value, itemId, newDescription: '2 litros' }, presenter);
 
   assert.equal(state.error, undefined);
-  assert.equal(state.success?.success, true);
+  assert.equal(state.success?.item.description, '2 litros');
   assert.equal(publishedEventName, 'TodoItemDescriptionChanged');
 
   const saved = await repository.findById(list.id);

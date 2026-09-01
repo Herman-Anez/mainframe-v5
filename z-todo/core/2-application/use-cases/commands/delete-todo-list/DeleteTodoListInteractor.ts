@@ -1,6 +1,6 @@
 import { DeleteTodoListUseCase } from './DeleteTodoListUseCase';
 import { DeleteTodoListInput } from './DeleteTodoListInput';
-import { DeleteTodoListOutputBoundary } from './DeleteTodoListOutputBoundary';
+import { OutputBoundary } from '../../../shared/OutputBoundary';
 import { TodoListRepositoryPort } from '../../../ports/out/TodoListRepositoryPort';
 import { EventBusPort } from '../../../ports/out/EventBusPort';
 import { UnitOfWorkPort } from '../../../ports/out/UnitOfWorkPort';
@@ -15,7 +15,7 @@ export class DeleteTodoListInteractor implements DeleteTodoListUseCase {
     private readonly unitOfWork: UnitOfWorkPort,
   ) {}
 
-  async execute(input: DeleteTodoListInput, output: DeleteTodoListOutputBoundary): Promise<void> {
+  async execute(input: DeleteTodoListInput, output: OutputBoundary<void>): Promise<void> {
     try {
       const id = TodoListId.from(input.listId);
       const list = await this.repository.findById(id);
@@ -32,7 +32,7 @@ export class DeleteTodoListInteractor implements DeleteTodoListUseCase {
       }
       await this.eventBus.publish([new TodoListDeleted(list.id.value, list.name)]);
 
-      output.presentSuccess({ success: true });
+      output.presentSuccess();
     } catch (error) {
       output.presentError(error as Error);
     }

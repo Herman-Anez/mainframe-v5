@@ -1,6 +1,8 @@
 import { ChangeTodoItemDescriptionUseCase } from './ChangeTodoItemDescriptionUseCase';
 import { ChangeTodoItemDescriptionInput } from './ChangeTodoItemDescriptionInput';
-import { ChangeTodoItemDescriptionOutputBoundary } from './ChangeTodoItemDescriptionOutputBoundary';
+import { ChangeTodoItemDescriptionOutput } from './ChangeTodoItemDescriptionOutput';
+import { OutputBoundary } from '../../../shared/OutputBoundary';
+import { toTodoItemView } from '../../../shared/TodoItemView';
 import { TodoListRepositoryPort } from '../../../ports/out/TodoListRepositoryPort';
 import { EventBusPort } from '../../../ports/out/EventBusPort';
 import { UnitOfWorkPort } from '../../../ports/out/UnitOfWorkPort';
@@ -15,16 +17,16 @@ export class ChangeTodoItemDescriptionInteractor implements ChangeTodoItemDescri
     private readonly unitOfWork: UnitOfWorkPort,
   ) {}
 
-  async execute(input: ChangeTodoItemDescriptionInput, output: ChangeTodoItemDescriptionOutputBoundary): Promise<void> {
+  async execute(input: ChangeTodoItemDescriptionInput, output: OutputBoundary<ChangeTodoItemDescriptionOutput>): Promise<void> {
     try {
       const list = await this.repository.findById(TodoListId.from(input.listId));
       if (!list) {
         throw new TodoListNotFoundException(input.listId);
       }
-      list.changeItemDescription(input.itemId, input.newDescription);
+      const item = list.changeItemDescription(input.itemId, input.newDescription);
       await persistAndPublish(list, this.repository, this.eventBus, this.unitOfWork);
 
-      output.presentSuccess({ success: true });
+      output.presentSuccess({ item: toTodoItemView(item) });
     } catch (error) {
       output.presentError(error as Error);
     }

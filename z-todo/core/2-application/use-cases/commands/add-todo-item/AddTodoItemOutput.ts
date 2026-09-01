@@ -1,3 +1,3 @@
 export interface AddTodoItemOutput {
-  success: boolean;
+  itemId: string;
 }

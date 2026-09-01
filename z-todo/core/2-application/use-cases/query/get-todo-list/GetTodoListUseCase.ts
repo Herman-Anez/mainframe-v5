@@ -1,6 +1,5 @@
+import { UseCase } from '../../../shared/UseCase';
 import { GetTodoListInput } from './GetTodoListInput';
-import { GetTodoListOutputBoundary } from './GetTodoListOutputBoundary';
+import { GetTodoListOutput } from './GetTodoListOutput';
 
-export interface GetTodoListUseCase {
-  execute(input: GetTodoListInput, output: GetTodoListOutputBoundary): Promise<void>;
-}
+export interface GetTodoListUseCase extends UseCase<GetTodoListInput, GetTodoListOutput> {}

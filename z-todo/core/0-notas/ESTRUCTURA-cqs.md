@@ -8,7 +8,7 @@ Este proyecto tiene **dos versiones en paralelo**, para comparar:
 
 La diferencia entre ambas está acotada a 2 casos de uso (`get-todo-list`, `list-todo-lists`) y su infraestructura — todo lo demás (dominio, comandos, tests, `UnitOfWork`) es idéntico en las dos carpetas. `core-cqrs/` quedó **congelada** en el momento en que se armó el read model — no recibe los cambios posteriores descritos acá (interfaz de backend desacoplada, interfaz HTTP) salvo que se porten a mano.
 
-`core/` tiene además **dos frames de entrega distintos** conectados al mismo dominio/aplicación: `5-generic-implementation/` (consola) y `5-angular/` (SPA real, ver `angular-implementation.md`).
+`core/` tiene un frame de entrega conectado al dominio/aplicación: `5-generic-implementation/` (consola). Hubo un segundo frame, `5-angular/` (SPA real), pero se eliminó.
 
 ## Regla de dependencia
 
@@ -20,12 +20,11 @@ La diferencia entre ambas está acotada a 2 casos de uso (`get-todo-list`, `list
 3-adapters/backend                ← implementa TodoListControllerPort con un Controller real
 4-infrastructure                   ← implementa los ports de SALIDA de 2-application (repo, event bus, UoW)
 5-generic-implementation  ← un frame: composition root + presenters de consola
-5-angular                 ← otro frame: SPA real, wiring propio vía Angular DI
 ```
 
 Las flechas de dependencia siempre apuntan hacia adentro (hacia el dominio). El dominio no sabe que existen la aplicación, la infraestructura ni la UI. Este es el principio central de Clean Architecture (Robert C. Martin): las reglas de negocio no dependen de detalles técnicos.
 
-`4-infrastructure` y `3-adapters/backend` son distintas direcciones dentro de la capa de adapters: `4-infrastructure` implementa lo que la aplicación **pide** hacia afuera (ports de salida — *driven*); `3-adapters/backend` es consumido por algo de afuera que **invoca** la aplicación (port de entrada — *driving*). `2-application/use-cases-ports/backend` y `2-application/use-cases-ports/http` son puertos, no adapters — viven junto a `2-application/ports/out/` (mismo rol que `TodoListRepositoryPort` etc, pero del lado entrante): describen el contrato sin implementarlo. `use-cases-ports/backend` sí tiene adapter real (`3-adapters/backend/TodoListController.ts`); `use-cases-ports/http` todavía no tiene ninguno. Ninguno de estos es un frame completo — no tienen composition root, no corren solos. Los frames reales (`5-generic-implementation`, `5-angular`) los importan y los completan. Detalle a fondo, con analogías, en `arquitectura.md`.
+`4-infrastructure` y `3-adapters/backend` son distintas direcciones dentro de la capa de adapters: `4-infrastructure` implementa lo que la aplicación **pide** hacia afuera (ports de salida — *driven*); `3-adapters/backend` es consumido por algo de afuera que **invoca** la aplicación (port de entrada — *driving*). `2-application/use-cases-ports/backend` y `2-application/use-cases-ports/http` son puertos, no adapters — viven junto a `2-application/ports/out/` (mismo rol que `TodoListRepositoryPort` etc, pero del lado entrante): describen el contrato sin implementarlo. `use-cases-ports/backend` sí tiene adapter real (`3-adapters/backend/TodoListController.ts`); `use-cases-ports/http` todavía no tiene ninguno. Ninguno de estos es un frame completo — no tienen composition root, no corren solos. El frame real (`5-generic-implementation`) los importa y los completa. Detalle a fondo, con analogías, en `arquitectura.md`.
 
 ---
 
@@ -186,17 +185,6 @@ pnpm exec tsx core/5-generic-implementation/main.ts
 
 ---
 
-## `5-angular/` — Frame de SPA real
-
-Documentado a fondo en `angular-implementation.md`. Conecta `1-domain`/`2-application`/`4-infrastructure` directo (vía alias de `tsconfig.json`, no una copia) usando Angular DI en vez de `new` a mano — pero **no** pasa por `3-adapters/backend` ni `2-application/use-cases-ports/http`; tiene su propio `TodoFacadeService` + `AngularPresenter` genérico, corriendo todo en memoria del lado del browser.
-
-```bash
-pnpm start:angular   # dev server
-pnpm build:angular   # build de producción
-```
-
----
-
 ## Tests
 
 `node:test` nativo (cero frameworks de testing como dependencia) + `tsx` como loader de TypeScript. **35 tests**: 24 de los 9 interactores (camino feliz, cada excepción de dominio, publicación de cada evento, algún caso de fallo de infraestructura con rollback) + 3 de `2-application/use-cases-ports/http/routes.test.ts` (simulan un flujo HTTP completo sin ningún servidor, llamando `buildInput`/`useCase.execute` a mano) + 8 de `2-application/use-cases-ports/http/apiContract.test.ts` (coherencia del contrato contra las rutas reales, y `buildPath`).
@@ -211,8 +199,8 @@ Los fakes usados en los tests **son las implementaciones reales de infraestructu
 
 ## Archivos sueltos en la raíz
 
-- **`0-notas/`** — toda la documentación de la sesión: este archivo, `ESTRUCTURA-cqrs.md` (gemelo para `core-cqrs/`), `arquitectura.md` (Clean/Hexagonal explicado con analogías), `angular-implementation.md` (cómo se conecta `5-angular/`), `CAMBIOS-CQRS.md`, `CONVERSACION.md`, `doc.md` (DDD del módulo), `notas.md`.
-- **`package.json`** — `"test"` corre los tests de `core/` (CQS), `"test:cqrs"` los de `core-cqrs/`, `"start:angular"`/`"build:angular"` delegan a `core/5-angular` vía `pnpm --filter`. `main: "index.js"` sigue apuntando a un archivo que no existe (nunca se compiló a `dist/`). Pendiente, no resuelto.
+- **`0-notas/`** — toda la documentación de la sesión: este archivo, `ESTRUCTURA-cqrs.md` (gemelo para `core-cqrs/`), `arquitectura.md` (Clean/Hexagonal explicado con analogías), `flujo-caso-de-uso.md` (trace de un caso de uso, cliente y servidor), `CAMBIOS-CQRS.md`, `CONVERSACION.md`, `doc.md` (DDD del módulo), `notas.md`.
+- **`package.json`** — `"test"` corre los tests de `core/` (CQS), `"test:cqrs"` los de `core-cqrs/`. `main: "index.js"` sigue apuntando a un archivo que no existe (nunca se compiló a `dist/`). Pendiente, no resuelto.
 
 ---
 

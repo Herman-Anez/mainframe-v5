@@ -1,22 +1,22 @@
 import { TodoUseCases } from '../../2-application/use-cases/TodoUseCases';
 import { TodoListControllerPort } from '../../2-application/use-cases-ports/backend/TodoListControllerPort';
+import { OutputBoundary } from '../../2-application/shared/OutputBoundary';
 import { CreateTodoListRequest } from '../../2-application/use-cases-ports/backend/dtos/CreateTodoListRequest';
 import { AddTodoItemRequest } from '../../2-application/use-cases-ports/backend/dtos/AddTodoItemRequest';
-import { CreateTodoListOutputBoundary } from '../../2-application/use-cases/commands/create-todo-list/CreateTodoListOutputBoundary';
-import { AddTodoItemOutputBoundary } from '../../2-application/use-cases/commands/add-todo-item/AddTodoItemOutputBoundary';
+import { CreateTodoListOutput } from '../../2-application/use-cases/commands/create-todo-list/CreateTodoListOutput';
+import { AddTodoItemOutput } from '../../2-application/use-cases/commands/add-todo-item/AddTodoItemOutput';
 import { CompleteTodoItemInput } from '../../2-application/use-cases/commands/complete-todo-item/CompleteTodoItemInput';
-import { CompleteTodoItemOutputBoundary } from '../../2-application/use-cases/commands/complete-todo-item/CompleteTodoItemOutputBoundary';
+import { CompleteTodoItemOutput } from '../../2-application/use-cases/commands/complete-todo-item/CompleteTodoItemOutput';
 import { GetTodoListInput } from '../../2-application/use-cases/query/get-todo-list/GetTodoListInput';
-import { GetTodoListOutputBoundary } from '../../2-application/use-cases/query/get-todo-list/GetTodoListOutputBoundary';
+import { GetTodoListOutput } from '../../2-application/use-cases/query/get-todo-list/GetTodoListOutput';
 import { RenameTodoItemInput } from '../../2-application/use-cases/commands/rename-todo-item/RenameTodoItemInput';
-import { RenameTodoItemOutputBoundary } from '../../2-application/use-cases/commands/rename-todo-item/RenameTodoItemOutputBoundary';
+import { RenameTodoItemOutput } from '../../2-application/use-cases/commands/rename-todo-item/RenameTodoItemOutput';
 import { ChangeTodoItemDescriptionInput } from '../../2-application/use-cases/commands/change-todo-item-description/ChangeTodoItemDescriptionInput';
-import { ChangeTodoItemDescriptionOutputBoundary } from '../../2-application/use-cases/commands/change-todo-item-description/ChangeTodoItemDescriptionOutputBoundary';
+import { ChangeTodoItemDescriptionOutput } from '../../2-application/use-cases/commands/change-todo-item-description/ChangeTodoItemDescriptionOutput';
 import { ChangeTodoItemPriorityInput } from '../../2-application/use-cases/commands/change-todo-item-priority/ChangeTodoItemPriorityInput';
-import { ChangeTodoItemPriorityOutputBoundary } from '../../2-application/use-cases/commands/change-todo-item-priority/ChangeTodoItemPriorityOutputBoundary';
+import { ChangeTodoItemPriorityOutput } from '../../2-application/use-cases/commands/change-todo-item-priority/ChangeTodoItemPriorityOutput';
 import { DeleteTodoListInput } from '../../2-application/use-cases/commands/delete-todo-list/DeleteTodoListInput';
-import { DeleteTodoListOutputBoundary } from '../../2-application/use-cases/commands/delete-todo-list/DeleteTodoListOutputBoundary';
-import { ListTodoListsOutputBoundary } from '../../2-application/use-cases/query/list-todo-lists/ListTodoListsOutputBoundary';
+import { ListTodoListsOutput } from '../../2-application/use-cases/query/list-todo-lists/ListTodoListsOutput';
 
 /**
  * Implementación de TodoListControllerPort: agrupa los 9 casos de uso y
@@ -27,11 +27,11 @@ import { ListTodoListsOutputBoundary } from '../../2-application/use-cases/query
 export class TodoListController implements TodoListControllerPort {
     constructor(private readonly useCases: TodoUseCases) { }
 
-    async create(req: CreateTodoListRequest, output: CreateTodoListOutputBoundary): Promise<void> {
+    async create(req: CreateTodoListRequest, output: OutputBoundary<CreateTodoListOutput>): Promise<void> {
         await this.useCases.createTodoList.execute({ name: req.name }, output);
     }
 
-    async addItem(listId: string, req: AddTodoItemRequest, output: AddTodoItemOutputBoundary): Promise<void> {
+    async addItem(listId: string, req: AddTodoItemRequest, output: OutputBoundary<AddTodoItemOutput>): Promise<void> {
         await this.useCases.addTodoItem.execute(
             {
                 listId,
@@ -43,31 +43,31 @@ export class TodoListController implements TodoListControllerPort {
         );
     }
 
-    async completeItem(req: CompleteTodoItemInput, output: CompleteTodoItemOutputBoundary): Promise<void> {
+    async completeItem(req: CompleteTodoItemInput, output: OutputBoundary<CompleteTodoItemOutput>): Promise<void> {
         await this.useCases.completeTodoItem.execute(req, output);
     }
 
-    async getList(req: GetTodoListInput, output: GetTodoListOutputBoundary): Promise<void> {
+    async getList(req: GetTodoListInput, output: OutputBoundary<GetTodoListOutput>): Promise<void> {
         await this.useCases.getTodoList.execute(req, output);
     }
 
-    async renameItem(req: RenameTodoItemInput, output: RenameTodoItemOutputBoundary): Promise<void> {
+    async renameItem(req: RenameTodoItemInput, output: OutputBoundary<RenameTodoItemOutput>): Promise<void> {
         await this.useCases.renameTodoItem.execute(req, output);
     }
 
-    async changeItemDescription(req: ChangeTodoItemDescriptionInput, output: ChangeTodoItemDescriptionOutputBoundary): Promise<void> {
+    async changeItemDescription(req: ChangeTodoItemDescriptionInput, output: OutputBoundary<ChangeTodoItemDescriptionOutput>): Promise<void> {
         await this.useCases.changeTodoItemDescription.execute(req, output);
     }
 
-    async changeItemPriority(req: ChangeTodoItemPriorityInput, output: ChangeTodoItemPriorityOutputBoundary): Promise<void> {
+    async changeItemPriority(req: ChangeTodoItemPriorityInput, output: OutputBoundary<ChangeTodoItemPriorityOutput>): Promise<void> {
         await this.useCases.changeTodoItemPriority.execute(req, output);
     }
 
-    async deleteList(req: DeleteTodoListInput, output: DeleteTodoListOutputBoundary): Promise<void> {
+    async deleteList(req: DeleteTodoListInput, output: OutputBoundary<void>): Promise<void> {
         await this.useCases.deleteTodoList.execute(req, output);
     }
 
-    async listLists(output: ListTodoListsOutputBoundary): Promise<void> {
+    async listLists(output: OutputBoundary<ListTodoListsOutput>): Promise<void> {
         await this.useCases.listTodoLists.execute({}, output);
     }
 }

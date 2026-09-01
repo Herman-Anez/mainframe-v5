@@ -1,6 +1,6 @@
+import { UseCase } from '../../../shared/UseCase';
 import { ChangeTodoItemPriorityInput } from './ChangeTodoItemPriorityInput';
-import { ChangeTodoItemPriorityOutputBoundary } from './ChangeTodoItemPriorityOutputBoundary';
+import { ChangeTodoItemPriorityOutput } from './ChangeTodoItemPriorityOutput';
 
-export interface ChangeTodoItemPriorityUseCase {
-  execute(input: ChangeTodoItemPriorityInput, output: ChangeTodoItemPriorityOutputBoundary): Promise<void>;
-}
+export interface ChangeTodoItemPriorityUseCase
+  extends UseCase<ChangeTodoItemPriorityInput, ChangeTodoItemPriorityOutput> {}

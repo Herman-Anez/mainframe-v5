@@ -1,6 +1,8 @@
 import { ChangeTodoItemPriorityUseCase } from './ChangeTodoItemPriorityUseCase';
 import { ChangeTodoItemPriorityInput } from './ChangeTodoItemPriorityInput';
-import { ChangeTodoItemPriorityOutputBoundary } from './ChangeTodoItemPriorityOutputBoundary';
+import { ChangeTodoItemPriorityOutput } from './ChangeTodoItemPriorityOutput';
+import { OutputBoundary } from '../../../shared/OutputBoundary';
+import { toTodoItemView } from '../../../shared/TodoItemView';
 import { TodoListRepositoryPort } from '../../../ports/out/TodoListRepositoryPort';
 import { EventBusPort } from '../../../ports/out/EventBusPort';
 import { UnitOfWorkPort } from '../../../ports/out/UnitOfWorkPort';
@@ -15,16 +17,16 @@ export class ChangeTodoItemPriorityInteractor implements ChangeTodoItemPriorityU
     private readonly unitOfWork: UnitOfWorkPort,
   ) {}
 
-  async execute(input: ChangeTodoItemPriorityInput, output: ChangeTodoItemPriorityOutputBoundary): Promise<void> {
+  async execute(input: ChangeTodoItemPriorityInput, output: OutputBoundary<ChangeTodoItemPriorityOutput>): Promise<void> {
     try {
       const list = await this.repository.findById(TodoListId.from(input.listId));
       if (!list) {
         throw new TodoListNotFoundException(input.listId);
       }
-      list.changeItemPriority(input.itemId, input.newPriority);
+      const item = list.changeItemPriority(input.itemId, input.newPriority);
       await persistAndPublish(list, this.repository, this.eventBus, this.unitOfWork);
 
-      output.presentSuccess({ success: true });
+      output.presentSuccess({ item: toTodoItemView(item) });
     } catch (error) {
       output.presentError(error as Error);
     }

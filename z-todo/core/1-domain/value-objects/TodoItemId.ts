@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import { ValidationException } from '../exceptions/ValidationException';
 
 export class TodoItemId {
     private constructor(readonly value: string) { }
@@ -9,7 +10,7 @@ export class TodoItemId {
 
     static from(value: string): TodoItemId {
         if (!value || value.trim().length === 0) {
-            throw new Error('TodoItemId cannot be empty');
+            throw new ValidationException('TodoItemId cannot be empty');
         }
         return new TodoItemId(value);
     }

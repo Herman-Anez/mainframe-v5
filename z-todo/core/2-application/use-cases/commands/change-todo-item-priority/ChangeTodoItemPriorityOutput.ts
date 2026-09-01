@@ -1,3 +1,5 @@
+import { TodoItemView } from '../../../shared/TodoItemView';
+
 export interface ChangeTodoItemPriorityOutput {
-  success: boolean;
+  item: TodoItemView;
 }

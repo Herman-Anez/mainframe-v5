@@ -1,3 +1,5 @@
+import { TodoItemView } from '../../../shared/TodoItemView';
+
 export interface ChangeTodoItemDescriptionOutput {
-  success: boolean;
+  item: TodoItemView;
 }

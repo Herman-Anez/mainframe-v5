@@ -32,7 +32,7 @@ test('ChangeTodoItemPriorityInteractor cambia la prioridad y publica TodoItemPri
   await interactor.execute({ listId: list.id.value, itemId, newPriority: 'HIGH' }, presenter);
 
   assert.equal(state.error, undefined);
-  assert.equal(state.success?.success, true);
+  assert.equal(state.success?.item.priority, 'HIGH');
   assert.equal(publishedEventName, 'TodoItemPriorityChanged');
 
   const saved = await repository.findById(list.id);

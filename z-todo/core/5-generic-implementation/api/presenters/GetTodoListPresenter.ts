@@ -1,11 +1,7 @@
-
+import { OutputBoundary } from '../../../2-application/shared/OutputBoundary';
 import { GetTodoListOutput } from '../../../2-application/use-cases/query/get-todo-list/GetTodoListOutput';
-import { GetTodoListOutputBoundary } from '../../../2-application/use-cases/query/get-todo-list/GetTodoListOutputBoundary';
 
-
-export class GetTodoListPresenter implements GetTodoListOutputBoundary {
-    constructor() { }
-
+export class GetTodoListPresenter implements OutputBoundary<GetTodoListOutput> {
     presentSuccess(output: GetTodoListOutput): void {
         console.log({ data: output });
     }

@@ -1,11 +1,8 @@
-import { DeleteTodoListOutput } from "../../../2-application/use-cases/commands/delete-todo-list/DeleteTodoListOutput";
-import { DeleteTodoListOutputBoundary } from "../../../2-application/use-cases/commands/delete-todo-list/DeleteTodoListOutputBoundary";
+import { OutputBoundary } from "../../../2-application/shared/OutputBoundary";
 
-export class DeleteTodoListPresenter implements DeleteTodoListOutputBoundary {
-  constructor() {}
-
-  presentSuccess(output: DeleteTodoListOutput): void {
-    console.log(output);
+export class DeleteTodoListPresenter implements OutputBoundary<void> {
+  presentSuccess(): void {
+    console.log({ deleted: true });
   }
 
   presentError(error: Error): void {

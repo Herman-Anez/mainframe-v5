@@ -1,20 +1,20 @@
+import { OutputBoundary } from '../../shared/OutputBoundary';
 import { CreateTodoListRequest } from './dtos/CreateTodoListRequest';
 import { AddTodoItemRequest } from './dtos/AddTodoItemRequest';
-import { CreateTodoListOutputBoundary } from '../../use-cases/commands/create-todo-list/CreateTodoListOutputBoundary';
-import { AddTodoItemOutputBoundary } from '../../use-cases/commands/add-todo-item/AddTodoItemOutputBoundary';
+import { CreateTodoListOutput } from '../../use-cases/commands/create-todo-list/CreateTodoListOutput';
+import { AddTodoItemOutput } from '../../use-cases/commands/add-todo-item/AddTodoItemOutput';
 import { CompleteTodoItemInput } from '../../use-cases/commands/complete-todo-item/CompleteTodoItemInput';
-import { CompleteTodoItemOutputBoundary } from '../../use-cases/commands/complete-todo-item/CompleteTodoItemOutputBoundary';
+import { CompleteTodoItemOutput } from '../../use-cases/commands/complete-todo-item/CompleteTodoItemOutput';
 import { GetTodoListInput } from '../../use-cases/query/get-todo-list/GetTodoListInput';
-import { GetTodoListOutputBoundary } from '../../use-cases/query/get-todo-list/GetTodoListOutputBoundary';
+import { GetTodoListOutput } from '../../use-cases/query/get-todo-list/GetTodoListOutput';
 import { RenameTodoItemInput } from '../../use-cases/commands/rename-todo-item/RenameTodoItemInput';
-import { RenameTodoItemOutputBoundary } from '../../use-cases/commands/rename-todo-item/RenameTodoItemOutputBoundary';
+import { RenameTodoItemOutput } from '../../use-cases/commands/rename-todo-item/RenameTodoItemOutput';
 import { ChangeTodoItemDescriptionInput } from '../../use-cases/commands/change-todo-item-description/ChangeTodoItemDescriptionInput';
-import { ChangeTodoItemDescriptionOutputBoundary } from '../../use-cases/commands/change-todo-item-description/ChangeTodoItemDescriptionOutputBoundary';
+import { ChangeTodoItemDescriptionOutput } from '../../use-cases/commands/change-todo-item-description/ChangeTodoItemDescriptionOutput';
 import { ChangeTodoItemPriorityInput } from '../../use-cases/commands/change-todo-item-priority/ChangeTodoItemPriorityInput';
-import { ChangeTodoItemPriorityOutputBoundary } from '../../use-cases/commands/change-todo-item-priority/ChangeTodoItemPriorityOutputBoundary';
+import { ChangeTodoItemPriorityOutput } from '../../use-cases/commands/change-todo-item-priority/ChangeTodoItemPriorityOutput';
 import { DeleteTodoListInput } from '../../use-cases/commands/delete-todo-list/DeleteTodoListInput';
-import { DeleteTodoListOutputBoundary } from '../../use-cases/commands/delete-todo-list/DeleteTodoListOutputBoundary';
-import { ListTodoListsOutputBoundary } from '../../use-cases/query/list-todo-lists/ListTodoListsOutputBoundary';
+import { ListTodoListsOutput } from '../../use-cases/query/list-todo-lists/ListTodoListsOutput';
 
 /**
  * El contrato de la interfaz de backend, separado de su implementación
@@ -24,13 +24,13 @@ import { ListTodoListsOutputBoundary } from '../../use-cases/query/list-todo-lis
  * sin que quien la consuma sepa la diferencia.
  */
 export interface TodoListControllerPort {
-  create(req: CreateTodoListRequest, output: CreateTodoListOutputBoundary): Promise<void>;
-  addItem(listId: string, req: AddTodoItemRequest, output: AddTodoItemOutputBoundary): Promise<void>;
-  completeItem(req: CompleteTodoItemInput, output: CompleteTodoItemOutputBoundary): Promise<void>;
-  getList(req: GetTodoListInput, output: GetTodoListOutputBoundary): Promise<void>;
-  renameItem(req: RenameTodoItemInput, output: RenameTodoItemOutputBoundary): Promise<void>;
-  changeItemDescription(req: ChangeTodoItemDescriptionInput, output: ChangeTodoItemDescriptionOutputBoundary): Promise<void>;
-  changeItemPriority(req: ChangeTodoItemPriorityInput, output: ChangeTodoItemPriorityOutputBoundary): Promise<void>;
-  deleteList(req: DeleteTodoListInput, output: DeleteTodoListOutputBoundary): Promise<void>;
-  listLists(output: ListTodoListsOutputBoundary): Promise<void>;
+  create(req: CreateTodoListRequest, output: OutputBoundary<CreateTodoListOutput>): Promise<void>;
+  addItem(listId: string, req: AddTodoItemRequest, output: OutputBoundary<AddTodoItemOutput>): Promise<void>;
+  completeItem(req: CompleteTodoItemInput, output: OutputBoundary<CompleteTodoItemOutput>): Promise<void>;
+  getList(req: GetTodoListInput, output: OutputBoundary<GetTodoListOutput>): Promise<void>;
+  renameItem(req: RenameTodoItemInput, output: OutputBoundary<RenameTodoItemOutput>): Promise<void>;
+  changeItemDescription(req: ChangeTodoItemDescriptionInput, output: OutputBoundary<ChangeTodoItemDescriptionOutput>): Promise<void>;
+  changeItemPriority(req: ChangeTodoItemPriorityInput, output: OutputBoundary<ChangeTodoItemPriorityOutput>): Promise<void>;
+  deleteList(req: DeleteTodoListInput, output: OutputBoundary<void>): Promise<void>;
+  listLists(output: OutputBoundary<ListTodoListsOutput>): Promise<void>;
 }

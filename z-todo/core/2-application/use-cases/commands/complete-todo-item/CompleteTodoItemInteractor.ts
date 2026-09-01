@@ -1,6 +1,8 @@
 import { CompleteTodoItemUseCase } from './CompleteTodoItemUseCase';
 import { CompleteTodoItemInput } from './CompleteTodoItemInput';
-import { CompleteTodoItemOutputBoundary } from './CompleteTodoItemOutputBoundary';
+import { CompleteTodoItemOutput } from './CompleteTodoItemOutput';
+import { OutputBoundary } from '../../../shared/OutputBoundary';
+import { toTodoItemView } from '../../../shared/TodoItemView';
 import { TodoListRepositoryPort } from '../../../ports/out/TodoListRepositoryPort';
 import { EventBusPort } from '../../../ports/out/EventBusPort';
 import { UnitOfWorkPort } from '../../../ports/out/UnitOfWorkPort';
@@ -15,16 +17,16 @@ export class CompleteTodoItemInteractor implements CompleteTodoItemUseCase {
     private readonly unitOfWork: UnitOfWorkPort,
   ) {}
 
-  async execute(input: CompleteTodoItemInput, output: CompleteTodoItemOutputBoundary): Promise<void> {
+  async execute(input: CompleteTodoItemInput, output: OutputBoundary<CompleteTodoItemOutput>): Promise<void> {
     try {
       const list = await this.repository.findById(TodoListId.from(input.listId));
       if (!list) {
         throw new TodoListNotFoundException(input.listId);
       }
-      list.completeItem(input.itemId);
+      const item = list.completeItem(input.itemId);
       await persistAndPublish(list, this.repository, this.eventBus, this.unitOfWork);
 
-      output.presentSuccess({ success: true });
+      output.presentSuccess({ item: toTodoItemView(item) });
     } catch (error) {
       output.presentError(error as Error);
     }

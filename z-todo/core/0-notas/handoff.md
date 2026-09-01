@@ -21,13 +21,14 @@ core/
     backend/                    (TodoListController — solo la implementación; el puerto y los dtos se fueron a use-cases-ports/backend/)
   4-infrastructure/              (InMemoryTodoListRepository, InMemoryEventBus, InMemoryUnitOfWork)
   5-generic-implementation/      (frame de consola — composition root main.ts)
-  5-angular/                    (frame de SPA real — composition-root.providers.ts)
 core-cqrs/                      (CONGELADA — no recibe cambios de core/, nunca)
 ```
 
 Nombres viejos (`3-backend-interface`, `3-http-interface`, `3-infrastructure`, `4-generic-implementation`, `4-angular`) ya no existen en `core/`. `core-cqrs/` sigue con su numeración vieja a propósito (es un snapshot congelado, documentado en `ESTRUCTURA-cqrs.md`).
 
 **Actualización 2026-09-01**: se movió `3-adapters/http` completo a `2-application/use-cases-ports/http` (era contrato puro, sin adapter real todavía — ahora vive como puerto, simétrico a `ports/out/`). Y se dividió `3-adapters/backend`: `TodoListControllerPort.ts` + `dtos/` (el contrato) se movieron a `2-application/use-cases-ports/backend/`; `TodoListController.ts` (la implementación real, consumida por `main.ts`) se quedó en `3-adapters/backend/` — mismo patrón que `TodoListRepositoryPort` (en `ports/out/`) + `InMemoryTodoListRepository` (en `4-infrastructure/`). Verificado: `tsc --noEmit` limpio, `pnpm test` 35/35, `main.ts` y `httpExample.ts` corren igual.
+
+**Actualización 2026-09-01 (2)**: se eliminó `5-angular/` completo (36 archivos) — ya no hay frame Angular. Se limpiaron `pnpm-workspace.yaml` (sacado el `packages: [core/5-angular]`), `package.json` (sacados `start:angular`/`build:angular`), y `angular-implementation.md` (borrado — era solo sobre ese frame). Todas las docs restantes actualizadas para no mencionarlo. Único frame de entrega que queda: `5-generic-implementation/` (consola). Verificado: `tsc --noEmit` limpio, `pnpm test` 35/35, `main.ts` corre igual.
 
 **Verificación corrida y en verde**: `tsc --noEmit` limpio, `pnpm test` 35/35, `pnpm test:cqrs` 27/27, `main.ts` corre el flujo demo completo, `httpExample.ts` da los 9 "fetch failed" esperados, `pnpm build:angular` compila (se corrigieron además `pnpm-workspace.yaml` y `angular.json`, que habían quedado apuntando a `core/4-angular` tras el rename).
 
@@ -62,7 +63,7 @@ Después de la auditoría, la conversación giró a **explorar cómo se vería u
 
 2. **Por qué el gap está en HTTP y no en backend**: `3-adapters/backend` (`TodoListController`) ya tiene un consumidor real y funcionando — `5-generic-implementation/main.ts` lo llama in-process, sin red. Está completo. `2-application/use-cases-ports/http` en cambio no tiene ningún proceso sirviéndolo — ese es el gap real.
 
-3. **Camino propuesto si se construye** (no decidido, no iniciado): dos frames nuevos, mismo patrón que ya existe con `5-generic-implementation`/`5-angular`:
+3. **Camino propuesto si se construye** (no decidido, no iniciado): frames nuevos, mismo patrón que ya existe con `5-generic-implementation`:
    - `5-express-implementation/` (o similar) — binder real, importa `2-application/use-cases-ports/http/routes.ts`, sirve las 9 rutas con Express.
    - Un frame Next.js aparte, del lado cliente, consumiendo `apiContract.ts` con `fetch` real contra ese Express (mismo patrón que `httpExample.ts` pero contra un servidor que sí existe).
    - `2-application/use-cases-ports/http` en sí mismo no "corre" nada — es el plano compartido entre ambos lados (server y cliente), no la implementación.

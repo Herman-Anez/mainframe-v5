@@ -32,7 +32,7 @@ test('RenameTodoItemInteractor renombra el item y publica TodoItemRenamed', asyn
   await interactor.execute({ listId: list.id.value, itemId, newTitle: 'Comprar leche deslactosada' }, presenter);
 
   assert.equal(state.error, undefined);
-  assert.equal(state.success?.success, true);
+  assert.equal(state.success?.item.title, 'Comprar leche deslactosada');
   assert.equal(publishedEventName, 'TodoItemRenamed');
 
   const saved = await repository.findById(list.id);

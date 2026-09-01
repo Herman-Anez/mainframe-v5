@@ -1,7 +1,8 @@
 import { RouteDescriptor, HttpRequestData } from '../RouteDescriptor';
 import { ROUTE_METHOD_PATH } from '../routeMetadata';
 import { defaultErrorStatus } from '../httpErrorStatus';
-import { bodyAsRecord, stringField } from '../httpBody';
+import { bodyAsRecord } from '../httpBody';
+import { requireString } from '../httpValidation';
 import { RenameTodoItemUseCase } from '../../../use-cases/commands/rename-todo-item/RenameTodoItemUseCase';
 import { RenameTodoItemInput } from '../../../use-cases/commands/rename-todo-item/RenameTodoItemInput';
 import { RenameTodoItemOutput } from '../../../use-cases/commands/rename-todo-item/RenameTodoItemOutput';
@@ -12,7 +13,7 @@ export function createRenameTodoItemRoute(useCase: RenameTodoItemUseCase): Route
     buildInput: (req: HttpRequestData) => ({
       listId: req.params.listId,
       itemId: req.params.itemId,
-      newTitle: stringField(bodyAsRecord(req.body), 'newTitle'),
+      newTitle: requireString(bodyAsRecord(req.body), 'newTitle'),
     }),
     useCase,
     successStatus: 200,

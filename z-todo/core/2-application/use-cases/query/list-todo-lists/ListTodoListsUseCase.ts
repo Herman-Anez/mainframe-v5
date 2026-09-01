@@ -1,6 +1,5 @@
+import { UseCase } from '../../../shared/UseCase';
 import { ListTodoListsInput } from './ListTodoListsInput';
-import { ListTodoListsOutputBoundary } from './ListTodoListsOutputBoundary';
+import { ListTodoListsOutput } from './ListTodoListsOutput';
 
-export interface ListTodoListsUseCase {
-  execute(input: ListTodoListsInput, output: ListTodoListsOutputBoundary): Promise<void>;
-}
+export interface ListTodoListsUseCase extends UseCase<ListTodoListsInput, ListTodoListsOutput> {}

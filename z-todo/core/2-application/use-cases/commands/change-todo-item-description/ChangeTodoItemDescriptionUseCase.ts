@@ -1,6 +1,6 @@
+import { UseCase } from '../../../shared/UseCase';
 import { ChangeTodoItemDescriptionInput } from './ChangeTodoItemDescriptionInput';
-import { ChangeTodoItemDescriptionOutputBoundary } from './ChangeTodoItemDescriptionOutputBoundary';
+import { ChangeTodoItemDescriptionOutput } from './ChangeTodoItemDescriptionOutput';
 
-export interface ChangeTodoItemDescriptionUseCase {
-  execute(input: ChangeTodoItemDescriptionInput, output: ChangeTodoItemDescriptionOutputBoundary): Promise<void>;
-}
+export interface ChangeTodoItemDescriptionUseCase
+  extends UseCase<ChangeTodoItemDescriptionInput, ChangeTodoItemDescriptionOutput> {}

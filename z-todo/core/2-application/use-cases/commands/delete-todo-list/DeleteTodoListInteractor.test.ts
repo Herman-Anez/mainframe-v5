@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DeleteTodoListInteractor } from './DeleteTodoListInteractor';
-import { DeleteTodoListOutput } from './DeleteTodoListOutput';
 import { TodoList } from '../../../../1-domain/entities/TodoList';
 import { InMemoryTodoListRepository } from '../../../../4-infrastructure/persistence/InMemoryTodoListRepository';
 import { InMemoryEventBus } from '../../../../4-infrastructure/messaging/InMemoryEventBus';
@@ -23,11 +22,11 @@ test('DeleteTodoListInteractor borra la lista y publica TodoListDeleted', async 
     publishedEventName = event.eventName;
   });
 
-  const { presenter, state } = capture<DeleteTodoListOutput>();
+  const { presenter, state } = capture<void>();
   await interactor.execute({ listId: list.id.value }, presenter);
 
   assert.equal(state.error, undefined);
-  assert.equal(state.success?.success, true);
+  assert.equal(state.settled, 'success');
   assert.equal(publishedEventName, 'TodoListDeleted');
   assert.equal(await repository.findById(list.id), null);
 });
@@ -38,9 +37,9 @@ test('DeleteTodoListInteractor reporta TodoListNotFoundException si la lista no 
   const unitOfWork = new InMemoryUnitOfWork();
   const interactor = new DeleteTodoListInteractor(repository, eventBus, unitOfWork);
 
-  const { presenter, state } = capture<DeleteTodoListOutput>();
+  const { presenter, state } = capture<void>();
   await interactor.execute({ listId: 'no-existe' }, presenter);
 
-  assert.equal(state.success, undefined);
+  assert.equal(state.settled, 'error');
   assert.equal(state.error?.constructor.name, 'TodoListNotFoundException');
 });

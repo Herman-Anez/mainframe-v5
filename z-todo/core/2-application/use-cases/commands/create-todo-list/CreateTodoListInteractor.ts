@@ -1,6 +1,7 @@
 import { CreateTodoListUseCase } from './CreateTodoListUseCase';
 import { CreateTodoListInput } from './CreateTodoListInput';
-import { CreateTodoListOutputBoundary } from './CreateTodoListOutputBoundary';
+import { CreateTodoListOutput } from './CreateTodoListOutput';
+import { OutputBoundary } from '../../../shared/OutputBoundary';
 import { TodoListRepositoryPort } from '../../../ports/out/TodoListRepositoryPort';
 import { EventBusPort } from '../../../ports/out/EventBusPort';
 import { UnitOfWorkPort } from '../../../ports/out/UnitOfWorkPort';
@@ -14,7 +15,7 @@ export class CreateTodoListInteractor implements CreateTodoListUseCase {
     private readonly unitOfWork: UnitOfWorkPort,
   ) {}
 
-  async execute(input: CreateTodoListInput, output: CreateTodoListOutputBoundary): Promise<void> {
+  async execute(input: CreateTodoListInput, output: OutputBoundary<CreateTodoListOutput>): Promise<void> {
     try {
       const list = TodoList.create(input.name);
       await persistAndPublish(list, this.repository, this.eventBus, this.unitOfWork);

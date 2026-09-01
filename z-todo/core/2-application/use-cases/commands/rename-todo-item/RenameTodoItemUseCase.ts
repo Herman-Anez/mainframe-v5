@@ -1,6 +1,5 @@
+import { UseCase } from '../../../shared/UseCase';
 import { RenameTodoItemInput } from './RenameTodoItemInput';
-import { RenameTodoItemOutputBoundary } from './RenameTodoItemOutputBoundary';
+import { RenameTodoItemOutput } from './RenameTodoItemOutput';
 
-export interface RenameTodoItemUseCase {
-  execute(input: RenameTodoItemInput, output: RenameTodoItemOutputBoundary): Promise<void>;
-}
+export interface RenameTodoItemUseCase extends UseCase<RenameTodoItemInput, RenameTodoItemOutput> {}

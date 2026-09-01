@@ -1,10 +1,7 @@
+import { OutputBoundary } from "../../../2-application/shared/OutputBoundary";
 import { AddTodoItemOutput } from "../../../2-application/use-cases/commands/add-todo-item/AddTodoItemOutput";
-import { AddTodoItemOutputBoundary } from "../../../2-application/use-cases/commands/add-todo-item/AddTodoItemOutputBoundary";
 
-
-export class AddTodoItemPresenter implements AddTodoItemOutputBoundary {
-  constructor() {}
-
+export class AddTodoItemPresenter implements OutputBoundary<AddTodoItemOutput> {
   presentSuccess(output: AddTodoItemOutput): void {
     console.log(output);
   }

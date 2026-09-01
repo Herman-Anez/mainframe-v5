@@ -5,9 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "tsx --test $(find core -name '*.test.ts')",
-    "test:cqrs": "tsx --test $(find core-cqrs -name '*.test.ts')",
-    "start:angular": "pnpm --filter ./core/5-angular start",
-    "build:angular": "pnpm --filter ./core/5-angular build"
+    "test:cqrs": "tsx --test $(find core-cqrs -name '*.test.ts')"
   },
   "keywords": [],
   "author": "",

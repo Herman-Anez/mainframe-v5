@@ -1,15 +1,9 @@
-export interface TodoItemOutput {
-  id: string;
-  title: string;
-  description: string;
-  status: string;
-  priority: string;
-}
+import { TodoItemView } from '../../../shared/TodoItemView';
 
 export interface GetTodoListOutput {
   id: string;
   name: string;
   completionPercentage: number;
   isFullyCompleted: boolean;
-  items: TodoItemOutput[];
+  items: TodoItemView[];
 }

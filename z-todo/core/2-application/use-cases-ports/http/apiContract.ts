@@ -14,7 +14,6 @@ import { ChangeTodoItemDescriptionOutput } from '../../use-cases/commands/change
 import { ChangeTodoItemPriorityInput } from '../../use-cases/commands/change-todo-item-priority/ChangeTodoItemPriorityInput';
 import { ChangeTodoItemPriorityOutput } from '../../use-cases/commands/change-todo-item-priority/ChangeTodoItemPriorityOutput';
 import { DeleteTodoListInput } from '../../use-cases/commands/delete-todo-list/DeleteTodoListInput';
-import { DeleteTodoListOutput } from '../../use-cases/commands/delete-todo-list/DeleteTodoListOutput';
 import { GetTodoListInput } from '../../use-cases/query/get-todo-list/GetTodoListInput';
 import { GetTodoListOutput } from '../../use-cases/query/get-todo-list/GetTodoListOutput';
 import { ListTodoListsInput } from '../../use-cases/query/list-todo-lists/ListTodoListsInput';
@@ -38,7 +37,7 @@ export interface ApiContractTypes {
   createTodoList: { input: CreateTodoListInput; output: CreateTodoListOutput };
   listTodoLists: { input: ListTodoListsInput; output: ListTodoListsOutput };
   getTodoList: { input: GetTodoListInput; output: GetTodoListOutput };
-  deleteTodoList: { input: DeleteTodoListInput; output: DeleteTodoListOutput };
+  deleteTodoList: { input: DeleteTodoListInput; output: void };
   addTodoItem: { input: AddTodoItemInput; output: AddTodoItemOutput };
   completeTodoItem: { input: CompleteTodoItemInput; output: CompleteTodoItemOutput };
   renameTodoItem: { input: RenameTodoItemInput; output: RenameTodoItemOutput };

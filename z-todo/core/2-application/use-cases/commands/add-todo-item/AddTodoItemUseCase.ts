@@ -1,6 +1,5 @@
+import { UseCase } from '../../../shared/UseCase';
 import { AddTodoItemInput } from './AddTodoItemInput';
-import { AddTodoItemOutputBoundary } from './AddTodoItemOutputBoundary';
+import { AddTodoItemOutput } from './AddTodoItemOutput';
 
-export interface AddTodoItemUseCase {
-  execute(input: AddTodoItemInput, output: AddTodoItemOutputBoundary): Promise<void>;
-}
+export interface AddTodoItemUseCase extends UseCase<AddTodoItemInput, AddTodoItemOutput> {}

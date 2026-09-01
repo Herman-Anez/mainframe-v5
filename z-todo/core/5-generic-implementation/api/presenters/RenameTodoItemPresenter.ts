@@ -1,9 +1,7 @@
+import { OutputBoundary } from "../../../2-application/shared/OutputBoundary";
 import { RenameTodoItemOutput } from "../../../2-application/use-cases/commands/rename-todo-item/RenameTodoItemOutput";
-import { RenameTodoItemOutputBoundary } from "../../../2-application/use-cases/commands/rename-todo-item/RenameTodoItemOutputBoundary";
 
-export class RenameTodoItemPresenter implements RenameTodoItemOutputBoundary {
-  constructor() {}
-
+export class RenameTodoItemPresenter implements OutputBoundary<RenameTodoItemOutput> {
   presentSuccess(output: RenameTodoItemOutput): void {
     console.log(output);
   }

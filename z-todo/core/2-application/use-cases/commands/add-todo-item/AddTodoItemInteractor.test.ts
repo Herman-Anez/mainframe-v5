@@ -34,12 +34,12 @@ test('AddTodoItemInteractor agrega el item y publica TodoItemAdded', async () =>
   );
 
   assert.equal(state.error, undefined);
-  assert.equal(state.success?.success, true);
   assert.equal(publishedEventName, 'TodoItemAdded');
 
   const saved = await repository.findById(list.id);
   assert.equal(saved?.items.length, 1);
   assert.equal(saved?.items[0].title, 'Comprar leche');
+  assert.equal(state.success?.itemId, saved?.items[0].id.value);
 });
 
 test('AddTodoItemInteractor reporta TodoListNotFoundException si la lista no existe', async () => {

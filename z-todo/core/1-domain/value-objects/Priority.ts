@@ -1,3 +1,5 @@
+import { ValidationException } from '../exceptions/ValidationException';
+
 export type PriorityValue = 'LOW' | 'MEDIUM' | 'HIGH';
 
 export class Priority {
@@ -21,7 +23,7 @@ export class Priority {
       case 'MEDIUM': return Priority.medium();
       case 'HIGH': return Priority.high();
       default:
-        throw new Error(`Invalid priority: ${value}`);
+        throw new ValidationException(`Invalid priority: ${value}`);
     }
   }
 

@@ -32,7 +32,7 @@ test('CompleteTodoItemInteractor marca el item completo y publica TodoItemComple
   await interactor.execute({ listId: list.id.value, itemId }, presenter);
 
   assert.equal(state.error, undefined);
-  assert.equal(state.success?.success, true);
+  assert.equal(state.success?.item.status, 'COMPLETED');
   assert.equal(publishedEventName, 'TodoItemCompleted');
 
   const saved = await repository.findById(list.id);
