@@ -4,4 +4,4 @@ allowBuilds:
   lmdb: true
   msgpackr-extract: true
 packages:
-  - "core/4-angular"
+  - "core/5-angular"

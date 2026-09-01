@@ -1,0 +1,43 @@
+@if (currentList(); as list) {
+  <p><a routerLink="/lists">&larr; Back to lists</a></p>
+
+  <h2>{{ list.name }}</h2>
+  <p>
+    {{ list.completionPercentage }}% complete
+    @if (list.isFullyCompleted) {
+      — all done!
+    }
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Title</th>
+        <th>Description</th>
+        <th>Priority</th>
+        <th>Status</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (item of list.items; track item.id) {
+        <tr
+          app-todo-item-row
+          [item]="item"
+          (complete)="onComplete(item.id)"
+          (rename)="onRename(item.id, $event)"
+          (changeDescription)="onChangeDescription(item.id, $event)"
+          (changePriority)="onChangePriority(item.id, $event)"
+        ></tr>
+      }
+    </tbody>
+  </table>
+
+  <app-add-todo-item-form (add)="onAddItem($event)" />
+
+  <p>
+    <button type="button" (click)="onDeleteList()">Delete this list</button>
+  </p>
+} @else {
+  <p>Loading…</p>
+}
