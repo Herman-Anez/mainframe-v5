@@ -9,19 +9,18 @@ proponer mejoras ni desviaciones.
 | Si querés entender… | Leé |
 |---|---|
 | Qué es un port, un adapter, la regla de dependencia, DIP, el patrón presenter | `arquitectura.md` |
-| El dominio en términos de DDD (aggregate, VO, eventos, lenguaje ubicuo, RF/UC) | `doc.md` |
+| El dominio en términos de DDD (aggregate, VO, eventos, lenguaje ubicuo, RF/UC) | `domio/documentacion del modulo.md` |
 | El recorrido carpeta por carpeta de `core/` | `ESTRUCTURA-cqs.md` |
 | Qué concepto vive en qué archivo, fortalezas y olores del código actual | `evaluacion-conceptos.md` |
 | Un caso de uso trazado de punta a punta (cliente y servidor) | `flujo-caso-de-uso.md` |
-| El detalle del puerto HTTP y el binder que falta | `use-cases-ports-http.md` |
+| El detalle del puerto HTTP y el binder que falta | `puertos/use-cases-ports-http.md` |
 
 **Alcance de "módulo"**: cada módulo nuevo es un **árbol de capas propio**, hermano de `core/` (ej.
 `z-todo/pagos/`, `z-todo/usuarios/`), con su propia numeración `1-domain/`…`5-generic-implementation/`
 y su propio composition root. No se mezclan bounded contexts dentro de las mismas carpetas.
 
-**No mirar como referencia**: `core-cqrs/` está **congelada** (usa numeración vieja `3-infrastructure`
-/ `4-generic-implementation` a propósito — no la copies). `core copy/` es un duplicado manual obsoleto
-— ignoralo por completo.
+`core/` es el único árbol del proyecto — no hay copias ni variantes que mirar. (Hubo una variante CQRS,
+`core-cqrs/`, y un duplicado `core copy/`; ambos se eliminaron.)
 
 ---
 
@@ -510,11 +509,11 @@ Express/Fastify/nada.
 ## 16. Punteros
 
 - Conceptos y analogías: `arquitectura.md`
-- DDD del dominio (RF/UC, lenguaje ubicuo): `doc.md`
+- DDD del dominio (RF/UC, lenguaje ubicuo): `domio/documentacion del modulo.md`
 - Tour carpeta por carpeta: `ESTRUCTURA-cqs.md`
 - Concepto → archivo, fortalezas y olores: `evaluacion-conceptos.md`
 - Un caso de uso trazado punta a punta: `flujo-caso-de-uso.md`
-- Puerto HTTP en detalle + el binder que falta: `use-cases-ports-http.md`
+- Puerto HTTP en detalle + el binder que falta: `puertos/use-cases-ports-http.md`
 
-`core-cqrs/` está congelada y usa numeración vieja a propósito — no es referencia para módulos nuevos.
-`core copy/` es un duplicado obsoleto — ignoralo.
+`core/` es el único árbol del proyecto. Hubo una variante CQRS (`core-cqrs/`) y un duplicado
+(`core copy/`); ambos se eliminaron y no son referencia para nada.

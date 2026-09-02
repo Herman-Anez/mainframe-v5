@@ -2,11 +2,9 @@
 
 Ejemplo de **DDD + Clean/Hexagonal Architecture** implementado en TypeScript puro (sin framework), organizando un dominio de "listas de tareas" en capas numeradas por orden de dependencia. Vive en `core/`.
 
-Este proyecto tiene **dos versiones en paralelo**, para comparar:
-- **`core/`** (este documento) — CQS: comandos y queries separados por carpeta/interface, pero ambos leen del mismo modelo (`TodoList`, el aggregate de escritura). Sin read model propio.
-- **`core-cqrs/`** — CQRS real: modelo de lectura separado (`TodoListReadModel`), sincronizado por un proyector que escucha domain events. Documentado en `ESTRUCTURA-cqrs.md` y `CAMBIOS-CQRS.md`.
+`core/` es **CQS**: comandos y queries separados por carpeta/interface, pero ambos leen del mismo modelo (`TodoList`, el aggregate de escritura). Sin read model propio.
 
-La diferencia entre ambas está acotada a 2 casos de uso (`get-todo-list`, `list-todo-lists`) y su infraestructura — todo lo demás (dominio, comandos, tests, `UnitOfWork`) es idéntico en las dos carpetas. `core-cqrs/` quedó **congelada** en el momento en que se armó el read model — no recibe los cambios posteriores descritos acá (interfaz de backend desacoplada, interfaz HTTP) salvo que se porten a mano.
+Hubo una variante **CQRS** paralela (`core-cqrs/`) — modelo de lectura separado (`TodoListReadModel`), sincronizado por un proyector que escuchaba domain events — que se usó para comparar los dos enfoques. Se eliminó del repo en la limpieza de 2026-09-02; su dominio y sus comandos eran idénticos a los de `core/`, la diferencia estaba acotada a 2 casos de uso (`get-todo-list`, `list-todo-lists`) y su infraestructura de lectura.
 
 `core/` tiene un frame de entrega conectado al dominio/aplicación: `5-generic-implementation/` (consola). Hubo un segundo frame, `5-angular/` (SPA real), pero se eliminó.
 
@@ -35,7 +33,7 @@ El núcleo. Reglas de negocio puras, sin async, sin I/O, sin imports externos (s
 ### `entities/`
 - **`TodoList.ts`** — el **aggregate root**. Único punto de entrada para mutar una lista y sus items. Mantiene un buffer interno de `DomainEvent[]` que se llena en cada operación relevante (`addDomainEvent`) y se vacía externamente con `clearEvents()`.
   - `create(name)` — factory que valida el nombre vía `Title` y emite `TodoListCreated`.
-  - `fromPersistence(id, name, items)` — reconstrucción desde storage, sin emitir eventos.
+  - `restore({ id, name, items })` — reconstrucción desde storage (recibe los `TodoItem` ya rehidratados), sin emitir eventos.
   - `addItem`, `completeItem`, `renameItem`, `changeItemDescription`, `changeItemPriority` — cada uno delega en el `TodoItem` correspondiente y emite su evento.
   - Regla de negocio hardcodeada: máximo 10 items por lista.
 - **`TodoItem.ts`** — entidad hija, no es aggregate root (no se accede directo, solo a través de `TodoList`). Encapsula sus 4 value objects (`Title`, `Description`, `Status`, `Priority`) y expone comportamientos (`complete`, `rename`, `changeDescription`, `changePriority`).
@@ -63,7 +61,7 @@ Cada evento implementa `DomainEvent` (`eventName: string`, `occurredOn: Date`) y
 
 > **Nota**: `TodoListDeleted` es el único evento que no nace del buffer interno del aggregate. Borrar una lista no es "mutarla", es removerla del repositorio — el aggregate no participa de esa operación, así que el interactor construye el evento a mano después de un `delete` exitoso.
 
-En esta versión (CQS) los eventos se publican y quedan disponibles para quien quiera suscribirse (`main.ts` solo los loguea), pero **nada los consume para mantener una proyección** — a diferencia de `core-cqrs/`, donde un `TodoListProjector` los escucha para actualizar un read model.
+En esta versión (CQS) los eventos se publican y quedan disponibles para quien quiera suscribirse (`main.ts` solo los loguea), pero **nada los consume para mantener una proyección**. La variante CQRS que hubo (`core-cqrs/`, ya eliminada) sí tenía un `TodoListProjector` que los escuchaba para actualizar un read model.
 
 ### `exceptions/`
 - **`DomainException.ts`** — clase base, extiende `Error`, fija `this.name` al nombre de la subclase.
@@ -118,7 +116,7 @@ El interactor nunca hace `return` — llama a `output.presentSuccess(...)` o `ou
 | `get-todo-list` | Trae una lista por id vía `repository.findById`, calcula `completionPercentage`/`isFullyCompleted` con `TodoListDomainService` en el momento |
 | `list-todo-lists` | Trae todas las listas vía `repository.findAll`, mismo cálculo por cada una |
 
-Esto es **CQS** (Command Query Separation): separación de responsabilidad a nivel de método/carpeta, pero un solo modelo por debajo. No es CQRS — para eso hace falta un modelo de lectura genuinamente distinto, que es lo que tiene `core-cqrs/`.
+Esto es **CQS** (Command Query Separation): separación de responsabilidad a nivel de método/carpeta, pero un solo modelo por debajo. No es CQRS — para eso hace falta un modelo de lectura genuinamente distinto (lo que tenía la variante `core-cqrs/`, ya eliminada).
 
 ### `shared/` — código compartido entre interactores (no es un caso de uso en sí)
 - **`persistAndPublish.ts`** — extrae el boilerplate repetido en los 6 comandos que mutan un aggregate: `unitOfWork.begin()` → `repository.save(list)` → `unitOfWork.commit()` (o `rollback()` + re-throw si falla) → `await eventBus.publish(list.domainEvents)` → `list.clearEvents()`. Cada interactor lo llama en una línea después de mutar el aggregate.
@@ -199,8 +197,8 @@ Los fakes usados en los tests **son las implementaciones reales de infraestructu
 
 ## Archivos sueltos en la raíz
 
-- **`0-notas/`** — toda la documentación de la sesión: este archivo, `ESTRUCTURA-cqrs.md` (gemelo para `core-cqrs/`), `arquitectura.md` (Clean/Hexagonal explicado con analogías), `flujo-caso-de-uso.md` (trace de un caso de uso, cliente y servidor), `CAMBIOS-CQRS.md`, `CONVERSACION.md`, `doc.md` (DDD del módulo), `notas.md`.
-- **`package.json`** — `"test"` corre los tests de `core/` (CQS), `"test:cqrs"` los de `core-cqrs/`. `main: "index.js"` sigue apuntando a un archivo que no existe (nunca se compiló a `dist/`). Pendiente, no resuelto.
+- **`core/0-notas/`** — la documentación del proyecto: `handoff.md` (estado actual + changelog) y `explicaciones/` con `arquitectura.md` (Clean/Hexagonal con analogías), este archivo, `flujo-caso-de-uso.md` (trace de un caso de uso, cliente y servidor), `domio/documentacion del modulo.md` (DDD del módulo), `evaluacion-conceptos.md`, `guidelines.md`, `puertos/use-cases-ports-http.md`.
+- **`package.json`** — `"test"` corre los tests de `core/`. `main: "index.js"` sigue apuntando a un archivo que no existe (nunca se compiló a `dist/`). Pendiente, no resuelto.
 
 ---
 
@@ -208,5 +206,5 @@ Los fakes usados en los tests **son las implementaciones reales de infraestructu
 
 1. **`main: "index.js"`** en `package.json` no existe (no hay build a `dist/` configurado).
 2. **`2-application/use-cases-ports/http` no tiene binder real del lado servidor.** Existen los `RouteDescriptor`, el contrato, y hasta un ejemplo de consumo del lado cliente (`httpExample.ts`) — pero ningún framework HTTP concreto (Express/Fastify/Next.js) sirve estas rutas todavía. Sería el próximo frame, tipo `5-express-implementation/`, que importaría `2-application/use-cases-ports/http` igual que `5-generic-implementation` importa `3-adapters/backend`.
-3. **Las queries reconstruyen el aggregate completo para leer.** `GetTodoListInteractor`/`ListTodoListsInteractor` pasan por `TodoListId.from`, `TodoList.fromPersistence` (implícito en el repositorio) y recorren cada `TodoItem` para mapear a DTO — trabajo de más comparado con leer un dato ya aplanado. Para esta escala no importa; si las lecturas crecieran mucho más que las escrituras, ahí es donde tendría sentido migrar a `core-cqrs/`.
+3. **Las queries reconstruyen el aggregate completo para leer.** `GetTodoListInteractor`/`ListTodoListsInteractor` pasan por `TodoListId.from`, `TodoListMapper.toDomain` (que usa `TodoList.restore`/`TodoItem.restore`) y recorren cada `TodoItem` para mapear a DTO — trabajo de más comparado con leer un dato ya aplanado. Para esta escala no importa; si las lecturas crecieran mucho más que las escrituras, ahí es donde tendría sentido un modelo de lectura separado (CQRS).
 4. **`buildInput` no valida esquema en runtime.** `stringField`/`bodyAsRecord` (`2-application/use-cases-ports/http/httpBody.ts`) hacen fallback silencioso ante datos faltantes o mal tipados — no rechazan un payload malformado. El tipado de TypeScript (`RouteDescriptor<TInput,TOutput>`) protege que el código esté bien conectado en compile-time, no que el request en runtime tenga la forma correcta.

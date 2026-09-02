@@ -2,7 +2,7 @@
 
 Documentación del dominio (`1-domain/`) en términos de **Domain-Driven Design** (Evans/Vernon): bounded context, lenguaje ubicuo, aggregate, entidades, value objects, domain events, domain services y excepciones de dominio.
 
-Este documento describe el dominio tal como vive en `core/1-domain/` — es **idéntico** en `core-cqrs/1-domain/` (el read model de CQRS es una capa de aplicación/infraestructura por encima, no toca el dominio). Ver `ESTRUCTURA-cqs.md`/`ESTRUCTURA-cqrs.md` para cómo se orquesta desde afuera.
+Este documento describe el dominio tal como vive en `core/1-domain/`. Hubo una variante CQRS (`core-cqrs/`, ya eliminada) cuyo `1-domain/` era **idéntico** — el read model vivía como una capa de aplicación/infraestructura por encima, sin tocar el dominio. Ver `../ESTRUCTURA-cqs.md` para cómo se orquesta desde afuera.
 
 ---
 
@@ -39,7 +39,7 @@ Es el **único punto de entrada** para leer o mutar una lista y sus items — na
 
 **Ciclo de vida:**
 - `TodoList.create(name)` — factory estático, único punto de creación válida. Genera un `TodoListId` nuevo y emite `TodoListCreated`.
-- `TodoList.fromPersistence(id, name, items)` — reconstrucción desde storage, sin emitir eventos (la historia ya pasó).
+- `TodoList.restore({ id, name, items })` — reconstrucción desde storage (recibe los `TodoItem` ya rehidratados vía `TodoItem.restore`), sin emitir eventos (la historia ya pasó).
 
 **Comportamientos** (todos los métodos públicos que mutan estado, todos devuelven `void` o el dato mínimo necesario — nunca exponen el array interno mutable):
 `addItem`, `completeItem`, `renameItem`, `changeItemDescription`, `changeItemPriority`.
@@ -89,7 +89,7 @@ Tiene identidad propia (`TodoItemId`) pero **no es accesible desde afuera del ag
 | `TodoItemPriorityChanged` | `TodoList.changeItemPriority()` |
 | `TodoListDeleted` | *Excepción*: no nace del aggregate — borrar no es una mutación de `TodoList`, es removerla del repositorio. El evento se construye desde la capa de aplicación después de un `delete` exitoso. |
 
-Los eventos son el mecanismo por el cual el dominio comunica "esto pasó" sin acoplarse a quién esté escuchando — en `core-cqrs/` alimentan un proyector que mantiene un read model; en `core/` y `core-cqrs/` por igual, `main.ts` los loguea.
+Los eventos son el mecanismo por el cual el dominio comunica "esto pasó" sin acoplarse a quién esté escuchando — en `core/`, `main.ts` los loguea. (En la variante CQRS que hubo alimentaban además un proyector que mantenía un read model.)
 
 ---
 
@@ -104,25 +104,25 @@ static calculateCompletionPercentage(items: readonly { status: string }[]): numb
 static isFullyCompleted(items: readonly { status: string }[]): boolean
 ```
 
-Deliberadamente opera sobre `{ status: string }[]` genérico, no sobre `TodoList` — así lo puede invocar tanto la capa de aplicación al reconstruir el aggregate (`core/`) como un proyector que solo tiene items planos, sin entidades (`core-cqrs/`).
+Deliberadamente opera sobre `{ status: string }[]` genérico, no sobre `TodoList` — así lo puede invocar tanto la capa de aplicación al reconstruir el aggregate como cualquier consumidor que solo tenga items planos, sin entidades (p.ej. un proyector de read model).
 
 ---
 
 ## Excepciones de dominio
 
-`1-domain/exceptions/`. `DomainException` como base (extiende `Error`, fija `this.name`), y dos subclases tipadas para los casos de "no encontrado": `TodoListNotFoundException`, `TodoItemNotFoundException`. Permiten a quien las atrape distinguir un error de negocio esperado de un error inesperado (`instanceof`).
+`1-domain/exceptions/`. `DomainException` como base `abstract` (extiende `Error`, fija `this.name`) con un `readonly code: 'NOT_FOUND' | 'CONFLICT' | 'VALIDATION'`. Subclases: `TodoListNotFoundException` / `TodoItemNotFoundException` (`NOT_FOUND`), `TodoListFullException` / `TodoItemAlreadyCompletedException` (`CONFLICT`), `ValidationException` (`VALIDATION`, una sola para todos los value objects). Quien las atrape enruta por `code` — la capa HTTP lo mapea a 404/409/422 sin encadenar `instanceof` (ver `2-application/use-cases-ports/http/httpErrorStatus.ts`).
 
 ---
 
 ## Repositorio — el puerto de persistencia (visto desde el dominio)
 
-DDD trata al repositorio como parte del **lenguaje del dominio** aunque su implementación viva en infraestructura — es la abstracción "dame/guardame un aggregate completo". En este proyecto el contrato es `TodoListRepositoryPort` (en `2-application/ports/out/`, no en `1-domain/`, siguiendo Clean Architecture): `save`, `findById`, `findAll`, `delete`. Trabaja siempre con el aggregate `TodoList` entero — nunca con partes sueltas de él.
+DDD trata al repositorio como parte del **lenguaje del dominio** aunque su implementación viva en infraestructura — es la abstracción "dame/guardame una lista completa". En este proyecto el contrato es `TodoListRepositoryPort` (en `2-application/ports/out/`, no en `1-domain/`, siguiendo Clean Architecture): `save`, `findById`, `findAll`, `delete`. Desde 2026-09-02 habla en `TodoListRecord` (DTO plano) y `string`, no en el aggregate — la traducción record↔`TodoList` la hace `TodoListMapper` (`2-application/shared/`), así la persistencia no importa nada de `1-domain/`. Trabaja siempre con la lista entera, nunca con partes sueltas.
 
 ---
 
 ## Cómo se orquesta desde afuera del dominio
 
-El dominio no conoce casos de uso, controllers ni presenters — esos son responsabilidad de `2-application/` (incluye el puerto entrante `use-cases-ports/http/`), `3-adapters/backend/` (adapter de entrada, agnóstico a transporte) y el frame (`5-generic-implementation/`). En resumen: un **interactor** (caso de uso) carga el aggregate vía el repositorio, le pide que ejecute un comportamiento (`list.addItem(...)`), lo persiste, y publica los eventos que quedaron en su buffer. Detalle completo, con toda la capa de aplicación, en `ESTRUCTURA-cqs.md` (o `ESTRUCTURA-cqrs.md` si te interesa la variante con read model).
+El dominio no conoce casos de uso, controllers ni presenters — esos son responsabilidad de `2-application/` (incluye el puerto entrante `use-cases-ports/http/`), `3-adapters/backend/` (adapter de entrada, agnóstico a transporte) y el frame (`5-generic-implementation/`). En resumen: un **interactor** (caso de uso) carga el aggregate vía el repositorio, le pide que ejecute un comportamiento (`list.addItem(...)`), lo persiste, y publica los eventos que quedaron en su buffer. Detalle completo, con toda la capa de aplicación, en `../ESTRUCTURA-cqs.md`.
 
 ---
 

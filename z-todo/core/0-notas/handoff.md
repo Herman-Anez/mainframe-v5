@@ -34,10 +34,9 @@ core/
     messaging/                  (InMemoryEventBus)
     unit-of-work/               (InMemoryUnitOfWork)
   5-generic-implementation/      (frame de consola — composition root main.ts)
-core-cqrs/                      (CONGELADA — no recibe cambios de core/, nunca)
 ```
 
-Nombres viejos (`3-backend-interface`, `3-http-interface`, `3-infrastructure`, `4-generic-implementation`, `4-angular`) ya no existen en `core/`. `core-cqrs/` sigue con su numeración vieja a propósito (es un snapshot congelado, documentado en `ESTRUCTURA-cqrs.md`).
+Nombres viejos (`3-backend-interface`, `3-http-interface`, `3-infrastructure`, `4-generic-implementation`, `4-angular`) ya no existen en `core/`. Hubo una variante CQRS paralela (`core-cqrs/`, read model separado, numeración vieja) — se eliminó del repo en la limpieza de 2026-09-02; el dominio y los comandos eran idénticos a `core/`.
 
 **Actualización 2026-09-01**: se movió `3-adapters/http` completo a `2-application/use-cases-ports/http` (era contrato puro, sin adapter real todavía — ahora vive como puerto, simétrico a `ports/out/`). Y se dividió `3-adapters/backend`: `TodoListControllerPort.ts` + `dtos/` (el contrato) se movieron a `2-application/use-cases-ports/backend/`; `TodoListController.ts` (la implementación real, consumida por `main.ts`) se quedó en `3-adapters/backend/` — mismo patrón que `TodoListRepositoryPort` (en `ports/out/`) + `InMemoryTodoListRepository` (en `4-infrastructure/`). Verificado: `tsc --noEmit` limpio, `pnpm test` 35/35, `main.ts` y `httpExample.ts` corren igual.
 
@@ -99,9 +98,9 @@ Doc del contrato HTTP + cómo conectar un binder Express y un cliente web tipado
 
 ---
 
-**Verificación previa (2026-09-01) corrida y en verde**: `tsc --noEmit` limpio, `pnpm test` 35/35, `pnpm test:cqrs` 27/27, `main.ts` corre el flujo demo completo, `httpExample.ts` da los 9 "fetch failed" esperados.
+**Verificación previa (2026-09-01) corrida y en verde**: `tsc --noEmit` limpio, `pnpm test` 35/35, `main.ts` corre el flujo demo completo, `httpExample.ts` da los 9 "fetch failed" esperados.
 
-**Docs actualizadas**: `handoff.md` (esta sección), `arquitectura.md` (sección "Actualización 2026-09-02" + correcciones inline), `use-cases-ports-http.md`. **No tocadas a propósito** (históricas/congeladas): `CAMBIOS-CQRS.md`, `CONVERSACION.md`, `ESTRUCTURA-cqrs.md` (describe `core-cqrs/`, que no cambió). `ESTRUCTURA-cqs.md` / `doc.md` describen el modelo DDD conceptual y siguen válidas salvo los detalles de excepciones y del repositorio.
+**Docs actualizadas**: `handoff.md` (esta sección), `explicaciones/arquitectura.md` (sección "Actualización 2026-09-02" + correcciones inline), `explicaciones/puertos/use-cases-ports-http.md`. `explicaciones/ESTRUCTURA-cqs.md` y `explicaciones/domio/documentacion del modulo.md` describen el modelo DDD conceptual y siguen válidas salvo los detalles de excepciones y del repositorio.
 
 ## Auditoría post-restructure (ya corrida, resultado limpio)
 
@@ -119,7 +118,7 @@ Se lanzó un audit fork completo después del restructuring. Resultado: **cero v
 **Gaps ya conocidos** (no son bugs, son "no implementado todavía") — estado al 2026-09-02:
 1. `2-application/use-cases-ports/http` no tiene binder HTTP real (Express/Fastify/Next) — existe el contrato completo (`RouteDescriptor`, `apiContract.ts`, ejemplo `httpExample.ts`) pero nada sirve las rutas. **Sigue vigente.**
 2. ~~`httpBody.ts` no valida esquema~~ — **parcialmente cerrado 2026-09-02**: `httpValidation.requireString` corta los campos obligatorios faltantes (→ 400). Longitudes/enums los sigue validando el dominio (→ 422). No hay Zod/JSON-Schema en el borde.
-3. Las queries (`GetTodoListInteractor`/`ListTodoListsInteractor`) reconstruyen el aggregate completo para leer (ahora vía `TodoListMapper.toDomain`) — no hay modelo de lectura aplanado en `core/` (eso es lo que sí tiene `core-cqrs/`). **Sigue vigente.**
+3. Las queries (`GetTodoListInteractor`/`ListTodoListsInteractor`) reconstruyen el aggregate completo para leer (ahora vía `TodoListMapper.toDomain`) — no hay modelo de lectura aplanado en `core/`. **Sigue vigente.**
 4. `main: "index.js"` en `package.json` raíz apunta a un archivo que no existe (no hay build a `dist/` configurado). Menor, no bloquea nada.
 
 ---

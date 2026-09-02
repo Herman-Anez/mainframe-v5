@@ -1,7 +1,13 @@
 # Evaluación del código + conceptos aplicados — `z-todo/core`
 
-Fecha: 2026-09-02. Basado en lectura completa de `core/` (todos los `.ts`), ejecución de
-`pnpm test` (**52/52 en verde**) y typecheck de `core/` (limpio; ver nota en §2.3).
+Fecha: 2026-09-02 (revisada tras la limpieza de copias). Basado en lectura completa de `core/` (todos
+los `.ts`), ejecución de `pnpm test` (**52/52 en verde**) y `tsc --noEmit -p tsconfig.json` (**limpio,
+exit 0**).
+
+> Limpieza aplicada: se eliminaron del repo el duplicado `core copy/` (traía `5-angular/` y arrastraba
+> ~30 errores de `tsc`) y la variante paralela `core-cqrs/` (CQRS con read model separado; su dominio y
+> sus comandos eran idénticos a `core/`). Se quitó el script `test:cqrs` de `package.json`. `core/`
+> quedó como único árbol del proyecto.
 
 ---
 
@@ -41,25 +47,26 @@ contrato HTTP existe como datos y tipos pero **nadie lo sirve** (gap #1 del hand
 
 | # | Sev | Qué | Dónde |
 |---|-----|-----|-------|
-| D1 | media | **`tsconfig.json` con `include: ["**/*.ts"]` sin `exclude`** arrastra la carpeta `core copy/` (duplicado manual con `5-angular`); `tsc -p tsconfig.json` tira ~30 errores de ahí. El typecheck "limpio" del handoff solo vale si se scopea a `core/`. Agregar `"exclude": ["core copy", "dist", "node_modules"]` o borrar `core copy/`. | `tsconfig.json:12` |
+| D1 | ~~media~~ **RESUELTO** | Antes: `tsconfig.json` con `include: ["**/*.ts"]` sin `exclude` arrastraba `core copy/` (duplicado con `5-angular`) → `tsc -p tsconfig.json` tiraba ~30 errores de ahí. Ahora `core copy/` fue eliminado y `tsc --noEmit -p tsconfig.json` da **exit 0, limpio** (verificado). Ya no hace falta un `exclude`. | `tsconfig.json:12` |
 | D2 | media | **`try/catch` + `output.presentError(error)` repetido literal en los 9 interactores**. Es el mismo bloque copiado. Cabe un helper/plantilla (`runUseCase(fn, output)`), un decorator, o mover el catch al borde. | todos los `*Interactor.ts` |
 | D3 | media | **`persistAndPublish` publica eventos DESPUÉS del `commit`** (`persistAndPublish.ts:21`). Si `eventBus.publish` falla, el estado quedó commiteado y los eventos se pierden. Para ir a una BD real hace falta patrón *outbox* (o publicar dentro de la transacción). Aceptable en in-memory, conviene anotarlo. | `persistAndPublish.ts:13-22` |
 | D4 | media | **`OutputBoundary` es sincrónico** (`presentSuccess(): void`) pero los interactores son `async`. Un presenter que haga I/O async no se puede esperar. Un binder HTTP real tiene que usar el truco de `capture()` (presenter que guarda estado y después se lee). Fricción conocida del patrón EBI en TS. | `shared/OutputBoundary.ts` |
-| D5 | baja | **Queries rehidratan el agregado completo solo para leer**: `GetTodoList`/`ListTodoLists` hacen `TodoListMapper.toDomain(record)` + `TodoListDomainService` y después aplanan a `TodoItemView`. Para listas grandes es un round-trip por el dominio innecesario; un read model plano (lo que sí tiene `core-cqrs/`) lo evita. | `GetTodoListInteractor.ts:22`, `ListTodoListsInteractor.ts:17-26` |
+| D5 | baja | **Queries rehidratan el agregado completo solo para leer**: `GetTodoList`/`ListTodoLists` hacen `TodoListMapper.toDomain(record)` + `TodoListDomainService` y después aplanan a `TodoItemView`. Para listas grandes es un round-trip por el dominio innecesario; un read model plano (CQRS) lo evita — de hecho la variante `core-cqrs/`, ya eliminada, lo hacía así. | `GetTodoListInteractor.ts:22`, `ListTodoListsInteractor.ts:17-26` |
 | D6 | baja | **`DeleteTodoListInteractor` no usa `persistAndPublish`**: reimplementa `begin/commit/rollback` + `publish` a mano (porque no reconstruye el agregado). Inconsistencia leve; cabría un `withUnitOfWork(uow, fn)`. | `DeleteTodoListInteractor.ts:25-33` |
 | D7 | baja | **`new Date()` en constructores de eventos y `randomUUID()` en los VO id** no son inyectables → no se pueden testear timestamps/ids deterministas. Gap ya reconocido. | `events/*.ts`, `TodoListId.ts:8`, `TodoItemId.ts:8` |
 | D8 | baja | **Gap principal (ya documentado): no hay binder HTTP**. `RouteDescriptor`/`routes.ts`/`apiContract.ts` no tienen quien los sirva; `httpExample.ts` "corre" tirando 9 *connection refused* a propósito. | `2-application/use-cases-ports/http/*` |
 | D9 | nitpick | `ListTodoListsInput` es `interface {}` vacía (consistencia de patrón, no bug). | `ListTodoListsInput.ts` |
-| D10 | nitpick | `package.json` raíz: `main: "index.js"` apunta a un archivo que no existe (no hay build a `dist/`). | `package.json:5` |
+| D10 | nitpick | `package.json` raíz: `main: "index.js"` apunta a un archivo que no existe (no hay build a `dist/`). Sigue pendiente. (El script `test:cqrs`, que apuntaba a la carpeta ya borrada `core-cqrs/`, sí se removió.) | `package.json:5` |
 | D11 | nitpick | `Priority.from` normaliza con `.toUpperCase()`; `Status.from` no (case-sensible). Asimetría menor entre dos VO hermanos. | `Priority.ts:21` vs `Status.ts:18` |
 | D12 | nitpick | `TodoItem` expone `get status(): string` (string plano, no el VO). Práctico para el mapper, pero filtra representación; un `StatusValue` tipado sería más estricto. | `TodoItem.ts:57` |
 
 ### 1.4 Métricas
 
 - **Tests:** 52/52 verde (`node:test`, sin framework). Cubren los 9 casos de uso + mapper + `httpErrorStatus` + `httpValidation` + `routes` (flujo HTTP simulado) + repo in-memory.
-- **Typecheck:** `core/` limpio en `strict`. (Ver D1 sobre `core copy/`.)
+- **Typecheck:** `tsc --noEmit -p tsconfig.json` **limpio, exit 0** (los ~30 errores previos venían de `core copy/`, ya eliminado — ver D1).
 - **Acoplamiento de framework en el núcleo:** cero (ni Express, ni Angular, ni React; solo `node:crypto`).
 - **Archivos por caso de uso:** 4 (Input, Output, UseCase, Interactor) tras colapsar los OutputBoundary.
+- **Árboles del proyecto:** uno solo (`core/`). Se eliminaron `core copy/` y la variante `core-cqrs/`.
 
 ---
 
@@ -107,7 +114,6 @@ Cada concepto con al menos un lugar donde se ve.
 | **Framework independence** | `RouteDescriptor.ts` comentario explícito "nada acá importa un framework" |
 | **Screaming architecture / feature folders** | una carpeta por caso de uso, con su Input/Output/UseCase/Interactor/Route juntos |
 | **Anti-corruption boundary (persistencia)** | `TodoListRecord` + `TodoListMapper` aíslan el dominio del almacén |
-| **Stable / frozen module** | `core-cqrs/` congelado; numeración vieja a propósito |
 | **Serializable persistence model** | `TodoListRecord`/`TodoItemRecord` — solo strings |
 
 ### 2.3 CQRS (parcial) y modelo de lectura
@@ -117,7 +123,7 @@ Cada concepto con al menos un lugar donde se ve.
 | **Separación command / query (carpetas)** | `use-cases/commands/*` vs `use-cases/query/*` |
 | **Command methods con efecto + eventos; queries sin mutación** | interactores de comando llaman `persistAndPublish`; `GetTodoList`/`ListTodoLists` no |
 | **Read model / DTO de lectura plano** | `TodoItemView` + `toTodoItemView` para cruzar el borde |
-| **CQRS completo NO aplicado** | comandos y queries comparten el mismo modelo y almacén (a diferencia de `core-cqrs/`) |
+| **CQRS completo NO aplicado** | comandos y queries comparten el mismo modelo y almacén (hubo una variante `core-cqrs/` con read model separado, ya eliminada) |
 
 ### 2.4 Patrones de diseño
 
@@ -190,13 +196,12 @@ Cada concepto con al menos un lugar donde se ve.
 | **Vertical slicing / package by feature** | dentro de `use-cases/` se agrupa por caso de uso, no por tipo de archivo |
 | **Explicit "restore ≠ create"** | documentado en los JSDoc de `TodoList.restore` / `TodoItem.restore` |
 | **Convención de capas numeradas** | prefijos `1-` … `5-` imponen orden de dependencia visualmente |
-| **Frozen snapshot para comparar enfoques** | `core-cqrs/` (CQRS puro) vs `core/` (DDD clásico) lado a lado |
 
 ---
 
 ## 3. Recomendaciones priorizadas
 
-1. **D1** — agregar `"exclude": ["core copy", "dist", "node_modules"]` a `tsconfig.json` (o borrar `core copy/`), para que `tsc -p tsconfig.json` vuelva a ser la verificación real.
+1. ~~**D1**~~ — hecho: `core copy/` eliminado, `tsc --noEmit -p tsconfig.json` limpio.
 2. **D8** — construir el binder Express (Opción 1 sobre `routes.ts`) + cliente tipado: es el gap que impide llamar a esto "completo".
 3. **D2** — extraer el `try/catch → presentError` repetido a un helper (`runUseCase(fn, output)`), quitando ~9 bloques idénticos.
 4. **D3** — dejar anotado (o resolver con outbox) que `persistAndPublish` publica fuera de la transacción antes de ir a una BD real.

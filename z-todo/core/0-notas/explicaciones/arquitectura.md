@@ -88,7 +88,7 @@ addItem(title: string, description = '', priority = 'MEDIUM'): TodoItem {
 
 Esta regla ("máximo 10 items") no tiene nada que ver con Postgres, con HTTP, ni con consola. Es pura lógica de negocio. Por eso vive en el círculo más interno — no depende de absolutamente nada técnico. Cada invariante que se rompe tira una subclase de `DomainException` con un `code` (`'NOT_FOUND' | 'CONFLICT' | 'VALIDATION'`); la capa HTTP lo mapea a un status (404/409/422) sin que el dominio sepa qué es un status — ver `httpErrorStatus.ts`.
 
-**Quiénes son**, concretamente: `TodoList` (aggregate), `TodoItem` (entidad), los value objects (`Title`, `Priority`, etc), los domain events, las excepciones de dominio, `TodoListDomainService`. Ver `doc.md` para el detalle DDD de cada uno.
+**Quiénes son**, concretamente: `TodoList` (aggregate), `TodoItem` (entidad), los value objects (`Title`, `Priority`, etc), los domain events, las excepciones de dominio, `TodoListDomainService`. Ver `domio/documentacion del modulo.md` para el detalle DDD de cada uno.
 
 ---
 
@@ -185,7 +185,7 @@ export class InMemoryTodoListRepository implements TodoListRepositoryPort {
 
 `implements TodoListRepositoryPort` es literalmente "esta heladera tiene el enchufe correcto". Vive en `4-infrastructure/` — la carpeta de detalles técnicos. El `structuredClone` en save/read aísla el store de cualquier referencia que tenga quien lo usa (semántica de BD real): mutar el aggregate después de `save` no cambia lo guardado, y dos `findById` devuelven objetos independientes.
 
-**La prueba de que esto funciona de verdad**, no en teoría: este proyecto tiene **dos adapters distintos** para el lado de lectura, en dos carpetas (`core/` vs `core-cqrs/`), y el dominio + los casos de uso de escritura son **exactamente los mismos archivos, sin un carácter de diferencia**. Cambiar de "leer directo del aggregate" a "leer de un read model separado" fue enchufar un adapter distinto (`InMemoryTodoListReadModelRepository` en vez de reusar `InMemoryTodoListRepository`) sin tocar el dominio. Si mañana quisieras Postgres en vez de memoria, sería el mismo ejercicio: un adapter nuevo, `implements TodoListRepositoryPort`, cero cambios en `1-domain/` o en los interactores.
+**La prueba de que esto funciona de verdad**, no en teoría: hubo una variante CQRS de este proyecto (`core-cqrs/`, ya eliminada del repo) con un **adapter de lectura distinto** — un read model separado (`InMemoryTodoListReadModelRepository`) en vez de reconstruir el aggregate — y el dominio + los casos de uso de escritura eran **exactamente los mismos archivos, sin un carácter de diferencia**. Cambiar de "leer directo del aggregate" a "leer de un read model separado" fue enchufar un adapter distinto sin tocar el dominio. Si mañana quisieras Postgres en vez de memoria, sería el mismo ejercicio: un adapter nuevo, `implements TodoListRepositoryPort`, cero cambios en `1-domain/` o en los interactores.
 
 ### Adapters de entrada vs. adapters de salida
 
@@ -309,7 +309,7 @@ En cada flecha (`→`), el código de un lado **no conoce el tipo concreto** del
 
 ## Por qué importa, en una frase
 
-Todo este andamiaje existe para una sola cosa: poder cambiar **cómo** hace algo el sistema (memoria → Postgres, consola → HTTP, un event bus síncrono → Kafka) sin tener que tocar **qué** hace el sistema (las reglas de negocio en `1-domain/` y la orquestación en `2-application/`). La prueba de que funciona no es teórica — es que este proyecto tiene dos implementaciones completas del lado de lectura (`core/` y `core-cqrs/`) compartiendo el mismo dominio, sin una sola línea duplicada ni tocada de más.
+Todo este andamiaje existe para una sola cosa: poder cambiar **cómo** hace algo el sistema (memoria → Postgres, consola → HTTP, un event bus síncrono → Kafka) sin tener que tocar **qué** hace el sistema (las reglas de negocio en `1-domain/` y la orquestación en `2-application/`). La prueba de que funciona no fue teórica — hubo dos implementaciones completas del lado de lectura (`core/` y la variante `core-cqrs/`, ya eliminada) que compartían el mismo dominio, sin una sola línea duplicada ni tocada de más.
 
 ---
 
@@ -327,4 +327,4 @@ Los ejemplos de arriba ya reflejan estos cambios; este resumen es para quien con
 
 **5. Validación de body en el borde HTTP.** `httpValidation.ts` (`requireString` + `RequestValidationError` → 400) corta los campos obligatorios faltantes antes de llegar al dominio. `stringField` (fallback silencioso) queda solo para opcionales.
 
-**Sin cambios**: la regla de dependencia, la dirección de las flechas, el patrón presenter/output-boundary (el interactor sigue sin hacer `return`), las dos fachadas de entrada (`TodoListController` + `RouteDescriptor`/`routes.ts`) que conviven, y `core-cqrs/` (congelada).
+**Sin cambios**: la regla de dependencia, la dirección de las flechas, el patrón presenter/output-boundary (el interactor sigue sin hacer `return`), y las dos fachadas de entrada (`TodoListController` + `RouteDescriptor`/`routes.ts`) que conviven.

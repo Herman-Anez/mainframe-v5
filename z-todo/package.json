@@ -4,8 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "tsx --test $(find core -name '*.test.ts')",
-    "test:cqrs": "tsx --test $(find core-cqrs -name '*.test.ts')"
+    "test": "tsx --test $(find core -name '*.test.ts')"
   },
   "keywords": [],
   "author": "",
