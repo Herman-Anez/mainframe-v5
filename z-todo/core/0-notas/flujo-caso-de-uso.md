@@ -6,23 +6,26 @@ Hay **una sola implementación del caso de uso** (`AddTodoItemInteractor`) y **d
 
 (Hubo una tercera ruta, un cliente Angular real, pero se eliminó — quedó fuera de este documento.)
 
+> Actualizado 2026-09-02: `AddTodoItemOutput` ahora es `{ itemId }` (antes `{ success: true }`); el boundary de salida es el genérico `OutputBoundary<T>`; el repositorio habla en `TodoListRecord` y el interactor mapea con `TodoListMapper`. Ver `handoff.md` / `arquitectura.md` §"Actualización 2026-09-02".
+
 ---
 
 ## El núcleo: caso de uso + dominio (siempre el mismo, en las 3 rutas)
 
 ```
 2-application/use-cases/commands/add-todo-item/
-  AddTodoItemUseCase.ts        ← el contrato: "esto sabe agregar un item"
-  AddTodoItemInput.ts          ← { listId, title, description?, priority? }
-  AddTodoItemOutput.ts         ← { success: true }
-  AddTodoItemOutputBoundary.ts ← { presentSuccess(output), presentError(error) }
-  AddTodoItemInteractor.ts     ← la implementación real
+  AddTodoItemUseCase.ts     ← el contrato: `extends UseCase<AddTodoItemInput, AddTodoItemOutput>`
+  AddTodoItemInput.ts       ← { listId, title, description, priority }
+  AddTodoItemOutput.ts      ← { itemId }
+  AddTodoItemInteractor.ts  ← la implementación real
 ```
 
+El boundary de salida ya no es un archivo por caso de uso: es el genérico `OutputBoundary<AddTodoItemOutput>` (`{ presentSuccess(output), presentError(error) }`) de `2-application/shared/OutputBoundary.ts`.
+
 `AddTodoItemInteractor.execute(input, output)`:
-1. Carga el aggregate `TodoList` desde `TodoListRepositoryPort` (`2-application/ports/out/`).
-2. Le pide al aggregate que ejecute el comportamiento: `list.addItem(title, description, priority)` — acá vive la regla de negocio real (`1-domain/entities/TodoList.ts`: máximo 10 items).
-3. Persiste (`repository.save`), publica los domain events acumulados (`EventBusPort`), y llama `output.presentSuccess(...)` o `output.presentError(...)`.
+1. `TodoListId.from(input.listId)` (valida id vacío → 422), lee un `TodoListRecord` plano de `TodoListRepositoryPort` (`2-application/ports/out/`), y lo reconstruye como aggregate: `TodoListMapper.toDomain(record)` (`2-application/shared/`).
+2. Le pide al aggregate que ejecute el comportamiento: `list.addItem(title, description, priority)` — acá vive la regla de negocio real (`1-domain/entities/TodoList.ts`: máximo 10 items → `TodoListFullException`). Devuelve el `TodoItem` creado.
+3. `persistAndPublish(list, ...)`: guarda `TodoListMapper.toRecord(list)` por el repositorio, publica los domain events acumulados (`EventBusPort`), y llama `output.presentSuccess({ itemId: item.id.value })` o `output.presentError(...)`.
 
 Esta parte **no cambia** entre consola o HTTP. Lo que cambia es quién arma el `Input`, quién instancia el `Interactor`, y quién recibe el `Output`.
 
@@ -61,10 +64,15 @@ routes.ts → createHttpRoutes(useCases)
   → createAddTodoItemRoute(useCases.addTodoItem)        [add-todo-item/AddTodoItemRoute.ts]
        return {
          method: 'POST', path: '/lists/:listId/items',   [routeMetadata.ts]
-         buildInput: (req) => ({ listId: req.params.listId, ...bodyAsRecord(req.body) fields... }),
+         buildInput: (req) => ({
+           listId: req.params.listId,
+           title: requireString(body, 'title'),           [httpValidation.ts — falta → RequestValidationError → 400]
+           description: stringField(body, 'description'),  [opcional]
+           priority: stringField(body, 'priority', 'MEDIUM'),
+         }),
          useCase: useCases.addTodoItem,                  ← el interactor DIRECTO, no pasa por TodoListController
          successStatus: 201,
-         errorStatus: defaultErrorStatus,                [httpErrorStatus.ts]
+         errorStatus: defaultErrorStatus,                [httpErrorStatus.ts — code → 400/404/409/422/500]
        }
 ```
 
@@ -73,11 +81,17 @@ Esto es un `RouteDescriptor<AddTodoItemInput, AddTodoItemOutput>` — datos puro
 ```ts
 for (const route of createHttpRoutes(useCases)) {
   app[route.method.toLowerCase()](route.path, async (req, res) => {
-    const input = route.buildInput({ params: req.params, query: req.query, body: req.body });
-    await route.useCase.execute(input, {
-      presentSuccess: (output) => res.status(route.successStatus).json(output),
-      presentError: (error) => res.status(route.errorStatus(error)).json({ error: error.message }),
-    });
+    try {
+      // buildInput puede lanzar RequestValidationError → va por el mismo catch
+      const input = route.buildInput({ params: req.params, query: req.query, body: req.body });
+      await route.useCase.execute(input, {
+        presentSuccess: (output) =>
+          route.successStatus === 204 ? res.status(204).end() : res.status(route.successStatus).json(output),
+        presentError: (error) => res.status(route.errorStatus(error)).json({ error: error.message }),
+      });
+    } catch (error) {
+      res.status(route.errorStatus(error)).json({ error: error.message });
+    }
   });
 }
 ```

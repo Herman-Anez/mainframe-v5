@@ -18,10 +18,10 @@ Las dos dicen lo mismo con dibujos distintos: **la lógica de negocio no puede d
 - **Use Case** — una acción concreta que el sistema sabe hacer ("crear lista", "completar item"). Orquesta al dominio, no tiene reglas de negocio propias.
 - **Interactor** — el nombre que Clean Architecture le da a la *implementación* de un use case. `CreateTodoListInteractor` es el interactor de `CreateTodoListUseCase`.
 - **Input Boundary** — la interfaz que promete "yo sé ejecutar este use case" (acá, los archivos `*UseCase.ts`). Es también un port de entrada.
-- **Output Boundary** — la interfaz que el interactor usa para avisar el resultado, sin saber quién la implementa (`presentSuccess`/`presentError`). Acá, los archivos `*OutputBoundary.ts`.
-- **DTO** (Data Transfer Object) — un objeto plano, sin comportamiento, que solo transporta datos entre capas. Acá: `*Input.ts`, `*Output.ts`. Nunca es una Entity ni un aggregate completo.
+- **Output Boundary** — la interfaz que el interactor usa para avisar el resultado, sin saber quién la implementa (`presentSuccess`/`presentError`). Acá: **un solo genérico** `OutputBoundary<T>` en `2-application/shared/` (antes había un `*OutputBoundary.ts` por caso de uso; se colapsaron el 2026-09-02).
+- **DTO** (Data Transfer Object) — un objeto plano, sin comportamiento, que solo transporta datos entre capas. Nunca es una Entity ni un aggregate completo. Acá: `*Input.ts`, `*Output.ts`; `TodoItemView` (proyección plana de un item, para respuestas); `TodoListRecord` (forma "de fila" del aggregate, para persistencia — ambos en `2-application/shared/`).
 - **Port** — una interfaz que define una forma, sin implementación, como el hueco de un enchufe de pared. No sabe (ni le importa) qué se conecta del otro lado.
-- **Port de salida** (*driven port*) — la aplicación pide algo al exterior a través de él. Acá: `TodoListRepositoryPort`, `EventBusPort`, `UnitOfWorkPort`.
+- **Port de salida** (*driven port*) — la aplicación pide algo al exterior a través de él. Acá: `TodoListRepositoryPort` (desde 2026-09-02 habla en `TodoListRecord` / `string`, no en `TodoList` / `TodoListId` — ver Pieza 4), `EventBusPort`, `UnitOfWorkPort`.
 - **Port de entrada** (*driving port*) — el exterior le pide algo a la aplicación a través de él. Acá: los `*UseCase.ts`.
 - **Adapter** — la implementación real que se enchufa en un port, como el aparato que conectás al enchufe.
 - **Adapter de salida** — implementa un port de salida. Acá: `InMemoryTodoListRepository`, `InMemoryEventBus`, `InMemoryUnitOfWork` (en `4-infrastructure/`).
@@ -51,7 +51,8 @@ En este proyecto, las murallas son carpetas numeradas:
 2-application/use-cases-ports/backend     ← puerto entrante: TodoListControllerPort + dtos/, el contrato que expone los 9 casos de uso como fachada.
 2-application/use-cases-ports/http        ← puerto entrante: describe cómo se exponen los casos de uso vía HTTP (agnóstico a framework).
 3-adapters/backend                ← conoce la aplicación, implementa TodoListControllerPort con un Controller genérico (adapter de entrada real).
-4-infrastructure                   ← conoce la aplicación y el dominio, implementa lo que la app PIDE (ports de salida).
+4-infrastructure                   ← implementa lo que la app PIDE (ports de salida). `messaging/` importa `DomainEvent`;
+                                     `persistence/` desde 2026-09-02 NO importa nada de `1-domain` (habla solo en `TodoListRecord`).
 5-generic-implementation ← un pueblo: consola. Conoce todo, arma todo.
 ```
 
@@ -62,6 +63,9 @@ Esto no es una opinión ni un estilo — lo puedo **probar** con un comando:
 ```bash
 grep -rln "4-infrastructure" core/1-domain core/2-application --include="*.ts"
 # (sin resultados — ni domain ni application importan nada de infraestructura)
+
+grep -rn "1-domain" core/4-infrastructure/persistence/*.ts
+# (ningún import — desde 2026-09-02 la persistencia tampoco conoce el dominio)
 ```
 
 Cero resultados. Ni un solo archivo de `1-domain/` o `2-application/` (fuera de los tests, que son harness de prueba, no código de producción) importa algo de `4-infrastructure/`. Lo mismo vale para `3-adapters/backend/` y `2-application/use-cases-ports/http/` — ninguno de los dos importa `4-infrastructure` ni ningún `5-*` (salvo, de nuevo, tests usando los adapters in-memory como fakes). La única carpeta que sí importa infraestructura y arma todo es `5-generic-implementation/main.ts` — el pueblo, armando el castillo.
@@ -75,14 +79,14 @@ En el vocabulario de Uncle Bob, "Entities" son las reglas de negocio más import
 ```ts
 // TodoList.ts
 addItem(title: string, description = '', priority = 'MEDIUM'): TodoItem {
-  if (this._items.length >= 10) {
-    throw new Error('TodoList cannot have more than 10 items');
+  if (this._items.length >= TodoList.MAX_ITEMS) {
+    throw new TodoListFullException(TodoList.MAX_ITEMS);
   }
   ...
 }
 ```
 
-Esta regla ("máximo 10 items") no tiene nada que ver con Postgres, con HTTP, ni con consola. Es pura lógica de negocio. Por eso vive en el círculo más interno — no depende de absolutamente nada técnico.
+Esta regla ("máximo 10 items") no tiene nada que ver con Postgres, con HTTP, ni con consola. Es pura lógica de negocio. Por eso vive en el círculo más interno — no depende de absolutamente nada técnico. Cada invariante que se rompe tira una subclase de `DomainException` con un `code` (`'NOT_FOUND' | 'CONFLICT' | 'VALIDATION'`); la capa HTTP lo mapea a un status (404/409/422) sin que el dominio sepa qué es un status — ver `httpErrorStatus.ts`.
 
 **Quiénes son**, concretamente: `TodoList` (aggregate), `TodoItem` (entidad), los value objects (`Title`, `Priority`, etc), los domain events, las excepciones de dominio, `TodoListDomainService`. Ver `doc.md` para el detalle DDD de cada uno.
 
@@ -92,17 +96,18 @@ Esta regla ("máximo 10 items") no tiene nada que ver con Postgres, con HTTP, ni
 
 Un "Use Case" es una acción concreta que el sistema puede hacer: "crear una lista", "completar un item". No es una regla de negocio universal (eso ya vive en el dominio) — es **orquestación**: agarrar el dato de entrada, pedirle al dominio que haga su trabajo, guardar el resultado, avisar que terminó.
 
-En este proyecto: `2-application/use-cases/`. Cada caso de uso son 5 archivos siempre con la misma forma:
+En este proyecto: `2-application/use-cases/`. Cada caso de uso son 4 archivos siempre con la misma forma:
 
 ```
 CreateTodoListInput.ts            → qué datos entran (un DTO, un objeto plano)
 CreateTodoListOutput.ts           → qué datos salen si sale bien
-CreateTodoListOutputBoundary.ts   → el "enchufe" para avisar el resultado (ver Pieza 4)
-CreateTodoListUseCase.ts          → el contrato: "esto es capaz de hacer create"
+CreateTodoListUseCase.ts          → el contrato: `extends UseCase<CreateTodoListInput, CreateTodoListOutput>`
 CreateTodoListInteractor.ts       → la implementación real
 ```
 
-Esto es un patrón específico de Clean Architecture llamado **Input/Output Boundary** — "boundary" en inglés es "frontera". La idea: definir con precisión qué cruza la frontera del caso de uso, para adentro (`Input`) y para afuera (`Output`), como objetos planos sin comportamiento — nunca pasás el objeto `TodoList` completo hacia afuera del use case, pasás un DTO plano armado a mano.
+El "enchufe" para avisar el resultado ya no es un archivo por caso de uso — es el genérico `OutputBoundary<T>` de `2-application/shared/` (ver Pieza 4). El contrato del caso de uso (`CreateTodoListUseCase`) tampoco repite la firma: extiende `UseCase<Input, Output>`, también de `shared/`.
+
+Esto es un patrón específico de Clean Architecture llamado **Input/Output Boundary** — "boundary" en inglés es "frontera". La idea: definir con precisión qué cruza la frontera del caso de uso, para adentro (`Input`) y para afuera (`Output`), como objetos planos sin comportamiento — nunca pasás el objeto `TodoList` completo hacia afuera del use case, pasás un DTO plano armado a mano (los comandos que devuelven un item usan `TodoItemView`).
 
 ---
 
@@ -111,7 +116,7 @@ Esto es un patrón específico de Clean Architecture llamado **Input/Output Boun
 Mirá este método:
 
 ```ts
-async execute(input: CreateTodoListInput, output: CreateTodoListOutputBoundary): Promise<void> {
+async execute(input: CreateTodoListInput, output: OutputBoundary<CreateTodoListOutput>): Promise<void> {
   try {
     const list = TodoList.create(input.name);
     ...
@@ -135,16 +140,18 @@ Acá es donde entra el nombre "hexagonal": Cockburn dibujó la aplicación como 
 En este proyecto, los enchufes son interfaces en `2-application/ports/out/`:
 
 ```ts
-// TodoListRepositoryPort.ts
+// TodoListRepositoryPort.ts  (desde 2026-09-02)
 export interface TodoListRepositoryPort {
-  save(todoList: TodoList): Promise<void>;
-  findById(id: TodoListId): Promise<TodoList | null>;
-  findAll(): Promise<TodoList[]>;
-  delete(id: TodoListId): Promise<void>;
+  save(record: TodoListRecord): Promise<void>;
+  findById(id: string): Promise<TodoListRecord | null>;
+  findAll(): Promise<TodoListRecord[]>;
+  delete(id: string): Promise<void>;
 }
 ```
 
-Esto **no es código que hace nada** — es una forma. Dice "cualquier cosa que sepa `save`/`findById`/`findAll`/`delete` con estas firmas, sirve". El caso de uso (`CreateTodoListInteractor`) recibe este enchufe en su constructor y lo usa sin saber qué hay conectado del otro lado — ¿un `Map` en memoria? ¿Postgres? ¿un archivo de texto? No le importa.
+Esto **no es código que hace nada** — es una forma. Dice "cualquier cosa que sepa `save`/`findById`/`findAll`/`delete` con estas firmas, sirve". El caso de uso recibe este enchufe en su constructor y lo usa sin saber qué hay conectado del otro lado — ¿un `Map` en memoria? ¿Postgres? ¿un archivo de texto? No le importa.
+
+**Decisión de diseño (2026-09-02)**: el port habla en `TodoListRecord` (datos planos), no en el aggregate `TodoList`. Así la implementación de persistencia (`4-infrastructure/persistence/`) no importa **nada** de `1-domain`. La traducción record↔aggregate la hace `TodoListMapper` (en `2-application/shared/`, la capa que sí puede conocer el dominio): el interactor lee un `record`, hace `TodoListMapper.toDomain(record)`, opera el aggregate, y `persistAndPublish` hace `save(TodoListMapper.toRecord(list))`. Trade-off: el repositorio deja de ser una "colección de agregados" (repo DDD clásico) y es un almacén de records; a cambio, un adapter Postgres tampoco tocaría el núcleo.
 
 Los 3 enchufes de este proyecto: `TodoListRepositoryPort` (guardar/leer listas), `EventBusPort` (publicar/escuchar eventos), `UnitOfWorkPort` (transacciones).
 
@@ -162,17 +169,21 @@ Hay dos direcciones de enchufe:
 Un adapter es la implementación real que se **enchufa** en un port. Siguiendo la analogía: el enchufe de pared es el port, la heladera es el adapter.
 
 ```ts
-// InMemoryTodoListRepository.ts
+// InMemoryTodoListRepository.ts  (desde 2026-09-02 — cero imports de 1-domain)
 export class InMemoryTodoListRepository implements TodoListRepositoryPort {
-  private readonly store = new Map<string, TodoList>();
-  async save(todoList: TodoList): Promise<void> {
-    this.store.set(todoList.id.value, todoList);
+  private readonly store = new Map<string, TodoListRecord>();
+  async save(record: TodoListRecord): Promise<void> {
+    this.store.set(record.id, structuredClone(record));   // guarda una foto plana
+  }
+  async findById(id: string): Promise<TodoListRecord | null> {
+    const r = this.store.get(id);
+    return r ? structuredClone(r) : null;                 // devuelve una copia
   }
   ...
 }
 ```
 
-`implements TodoListRepositoryPort` es literalmente "esta heladera tiene el enchufe correcto". Vive en `4-infrastructure/` — la carpeta de detalles técnicos.
+`implements TodoListRepositoryPort` es literalmente "esta heladera tiene el enchufe correcto". Vive en `4-infrastructure/` — la carpeta de detalles técnicos. El `structuredClone` en save/read aísla el store de cualquier referencia que tenga quien lo usa (semántica de BD real): mutar el aggregate después de `save` no cambia lo guardado, y dos `findById` devuelven objetos independientes.
 
 **La prueba de que esto funciona de verdad**, no en teoría: este proyecto tiene **dos adapters distintos** para el lado de lectura, en dos carpetas (`core/` vs `core-cqrs/`), y el dominio + los casos de uso de escritura son **exactamente los mismos archivos, sin un carácter de diferencia**. Cambiar de "leer directo del aggregate" a "leer de un read model separado" fue enchufar un adapter distinto (`InMemoryTodoListReadModelRepository` en vez de reusar `InMemoryTodoListRepository`) sin tocar el dominio. Si mañana quisieras Postgres en vez de memoria, sería el mismo ejercicio: un adapter nuevo, `implements TodoListRepositoryPort`, cero cambios en `1-domain/` o en los interactores.
 
@@ -250,25 +261,29 @@ Sigamos `controller.addItem(...)` capa por capa, nombrando en cada paso qué pie
 1. TodoListController.addItem(listId, req, presenter)
      ← Interface Adapter (adapter de entrada, en 3-adapters/backend, traduce la llamada)
 
-2. AddTodoItemUseCase.execute(input, presenter)
+2. AddTodoItemUseCase.execute(input, presenter)      // input: OutputBoundary<AddTodoItemOutput>
      ← Port de entrada (la interfaz que promete "sé hacer esto")
 
 3. AddTodoItemInteractor.execute(...)
      ← Use Case (la orquestación real)
 
-4. list.addItem(title, description, priority)
+4. record = repository.findById(id.value)            // lee un TodoListRecord plano
+   list = TodoListMapper.toDomain(record)            // lo reconstruye como aggregate
+     ← Port de salida + Mapper (2-application/shared/)
+
+5. list.addItem(title, description, priority)
      ← Entity (la regla de negocio: "máximo 10 items", vive en el dominio puro)
 
-5. this.repository.save(list)
-     ← llamada a través de un Port de salida (TodoListRepositoryPort)
+6. persistAndPublish(list, ...)  →  repository.save(TodoListMapper.toRecord(list))
+     ← se mapea el aggregate de vuelta a record y se guarda por el Port de salida
 
-6. InMemoryTodoListRepository.save(list)
-     ← Adapter de salida (implementación real, en infraestructura)
+7. InMemoryTodoListRepository.save(record)
+     ← Adapter de salida (guarda datos planos, NO conoce el dominio)
 
-7. output.presentSuccess({ success: true })
-     ← llamada a través del Output Boundary
+8. output.presentSuccess({ itemId: item.id.value })
+     ← llamada a través del Output Boundary genérico (OutputBoundary<AddTodoItemOutput>)
 
-8. AddTodoItemPresenter.presentSuccess(...)
+9. AddTodoItemPresenter.presentSuccess(...)
      ← Interface Adapter (adapter de salida, en 5-generic-implementation, traduce a console.log)
 ```
 
@@ -280,10 +295,10 @@ En cada flecha (`→`), el código de un lado **no conoce el tipo concreto** del
 
 | Concepto (Clean Architecture) | Concepto (Hexagonal) | Dónde vive acá |
 |---|---|---|
-| Entities | El núcleo del hexágono | `1-domain/` — `TodoList`, `TodoItem`, VOs, eventos |
+| Entities | El núcleo del hexágono | `1-domain/` — `TodoList`, `TodoItem`, VOs, eventos, excepciones con `code` |
 | Use Cases | — (Cockburn no separa esto tan fino) | `2-application/use-cases/` — los 9 interactores |
-| Input/Output Boundary | Ports de entrada/salida | `*Input.ts`, `*OutputBoundary.ts`, `ports/out/*.ts` |
-| — | Ports de salida | `TodoListRepositoryPort`, `EventBusPort`, `UnitOfWorkPort` |
+| Input/Output Boundary | Ports de entrada/salida | `*Input.ts`, `*Output.ts`, `2-application/shared/OutputBoundary.ts` (genérico), `ports/out/*.ts` |
+| — | Ports de salida | `TodoListRepositoryPort` (habla en `TodoListRecord`), `EventBusPort`, `UnitOfWorkPort` |
 | — | Ports de entrada | `CreateTodoListUseCase` y los otros 8 `*UseCase.ts`; `TodoListControllerPort` (`2-application/use-cases-ports/backend/`); `RouteDescriptor`+rutas (`2-application/use-cases-ports/http/`) |
 | Interface Adapters | Adapters de entrada | `TodoListController implements TodoListControllerPort` (`3-adapters/backend/`) |
 | Interface Adapters | Adapters de salida | `*Presenter` (`5-generic-implementation/`), `InMemoryTodoListRepository`/`InMemoryEventBus`/`InMemoryUnitOfWork` (`4-infrastructure/`) |
@@ -295,3 +310,21 @@ En cada flecha (`→`), el código de un lado **no conoce el tipo concreto** del
 ## Por qué importa, en una frase
 
 Todo este andamiaje existe para una sola cosa: poder cambiar **cómo** hace algo el sistema (memoria → Postgres, consola → HTTP, un event bus síncrono → Kafka) sin tener que tocar **qué** hace el sistema (las reglas de negocio en `1-domain/` y la orquestación en `2-application/`). La prueba de que funciona no es teórica — es que este proyecto tiene dos implementaciones completas del lado de lectura (`core/` y `core-cqrs/`) compartiendo el mismo dominio, sin una sola línea duplicada ni tocada de más.
+
+---
+
+## Actualización 2026-09-02 — cambios estructurales
+
+Los ejemplos de arriba ya reflejan estos cambios; este resumen es para quien conocía la versión anterior. Detalle completo (con verificación) en `handoff.md`.
+
+**1. `OutputBoundary<T>` genérico.** Antes había un `XxxOutputBoundary.ts` por caso de uso (9 archivos idénticos). Ahora hay **uno solo**, `2-application/shared/OutputBoundary.ts`. Igual con `UseCase<I,O>` (`2-application/shared/UseCase.ts`): cada `XxxUseCase.ts` lo extiende en vez de repetir la firma. Cada caso de uso pasó de 5 archivos a 4.
+
+**2. Excepciones de dominio con `code`.** `DomainException` es `abstract` con `readonly code: 'NOT_FOUND' | 'CONFLICT' | 'VALIDATION'`. Todos los invariantes tiran una subclase (`TodoListNotFoundException`, `TodoItemNotFoundException`, `TodoListFullException`, `TodoItemAlreadyCompletedException`, `ValidationException`) — ya no hay `throw new Error(...)` genérico. `2-application/use-cases-ports/http/httpErrorStatus.ts` mapea por `code`: 404 / 409 / 422, y lo que **no** es `DomainException` → 500. El dominio sigue sin saber qué es un status HTTP.
+
+**3. El repositorio no conoce el dominio.** `TodoListRepositoryPort` habla en `TodoListRecord` (DTO plano) y `string`, no en `TodoList` / `TodoListId`. `4-infrastructure/persistence/InMemoryTodoListRepository` no importa **nada** de `1-domain` — es un almacén de records con `structuredClone`. La traducción record↔aggregate la hace `TodoListMapper` (`2-application/shared/`), y la reconstrucción la habilitan `TodoList.restore(...)` / `TodoItem.restore(...)` / `Status.from(...)` en el dominio (rehidratar sin disparar eventos). Ver Piezas 4 y 5.
+
+**4. Outputs de comando con datos.** `AddTodoItem` devuelve `{ itemId }`; `complete`/`rename`/`change*` devuelven `{ item: TodoItemView }`; `deleteTodoList` no devuelve payload (`OutputBoundary<void>`, HTTP 204). Antes todos devolvían `{ success: true }`.
+
+**5. Validación de body en el borde HTTP.** `httpValidation.ts` (`requireString` + `RequestValidationError` → 400) corta los campos obligatorios faltantes antes de llegar al dominio. `stringField` (fallback silencioso) queda solo para opcionales.
+
+**Sin cambios**: la regla de dependencia, la dirección de las flechas, el patrón presenter/output-boundary (el interactor sigue sin hacer `return`), las dos fachadas de entrada (`TodoListController` + `RouteDescriptor`/`routes.ts`) que conviven, y `core-cqrs/` (congelada).

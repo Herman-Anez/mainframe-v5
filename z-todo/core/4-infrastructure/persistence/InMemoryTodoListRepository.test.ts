@@ -1,55 +1,69 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { InMemoryTodoListRepository } from './InMemoryTodoListRepository';
-import { TodoList } from '../../1-domain/entities/TodoList';
+import { TodoListRecord } from '../../2-application/shared/TodoListRecord';
 
-test('mutar el agregado después de save() NO cambia lo guardado', async () => {
+function record(id = 'list-1'): TodoListRecord {
+  return {
+    id,
+    name: 'Compras',
+    items: [{ id: 'item-1', title: 'Comprar leche', description: '', status: 'TODO', priority: 'MEDIUM' }],
+  };
+}
+
+test('save() guarda una copia: mutar el record pasado no cambia lo guardado', async () => {
   const repo = new InMemoryTodoListRepository();
-  const list = TodoList.create('Compras');
-  await repo.save(list);
+  const r = record();
+  await repo.save(r);
 
-  // se sigue trabajando el objeto original, sin volver a guardar
-  list.addItem('Comprar leche');
+  r.name = 'MUTADO';
+  r.items[0].status = 'COMPLETED';
 
-  const stored = await repo.findById(list.id);
-  assert.equal(stored?.items.length, 0, 'el store quedó en la foto del save(), sin el item nuevo');
+  const stored = await repo.findById('list-1');
+  assert.equal(stored?.name, 'Compras');
+  assert.equal(stored?.items[0].status, 'TODO');
 });
 
-test('dos findById() devuelven instancias independientes', async () => {
+test('findById() devuelve una copia: mutar el resultado no afecta un segundo findById()', async () => {
   const repo = new InMemoryTodoListRepository();
-  const list = TodoList.create('Compras');
-  const item = list.addItem('Comprar leche');
-  await repo.save(list);
+  await repo.save(record());
 
-  const a = await repo.findById(list.id);
-  const b = await repo.findById(list.id);
+  const first = await repo.findById('list-1');
+  first!.items[0].status = 'COMPLETED';
 
-  assert.notEqual(a, b, 'no es el mismo objeto');
-  a!.completeItem(item.id.value);
-  assert.equal(a!.items[0].status, 'COMPLETED');
-  assert.equal(b!.items[0].status, 'TODO', 'mutar una copia no afecta a la otra');
+  const second = await repo.findById('list-1');
+  assert.equal(second?.items[0].status, 'TODO');
 });
 
-test('el segundo save() sí actualiza el store', async () => {
+test('el segundo save() con el mismo id sobrescribe', async () => {
   const repo = new InMemoryTodoListRepository();
-  const list = TodoList.create('Compras');
-  await repo.save(list);
+  await repo.save(record());
 
-  list.addItem('Comprar leche');
-  await repo.save(list); // ahora sí
+  const updated = record();
+  updated.items.push({ id: 'item-2', title: 'Comprar pan', description: '', status: 'TODO', priority: 'LOW' });
+  await repo.save(updated);
 
-  const stored = await repo.findById(list.id);
-  assert.equal(stored?.items.length, 1);
+  const stored = await repo.findById('list-1');
+  assert.equal(stored?.items.length, 2);
 });
 
-test('findAll() también devuelve agregados reconstruidos e independientes', async () => {
+test('findAll() devuelve copias independientes', async () => {
   const repo = new InMemoryTodoListRepository();
-  const list = TodoList.create('Compras');
-  await repo.save(list);
+  await repo.save(record('a'));
+  await repo.save(record('b'));
 
-  const [fromAll] = await repo.findAll();
-  fromAll.addItem('Comprar leche');
+  const all = await repo.findAll();
+  assert.equal(all.length, 2);
+  all[0].name = 'MUTADO';
 
-  const stored = await repo.findById(list.id);
-  assert.equal(stored?.items.length, 0);
+  const reread = await repo.findAll();
+  assert.ok(reread.every((r) => r.name === 'Compras'));
+});
+
+test('delete() saca la entrada; findById() pasa a devolver null', async () => {
+  const repo = new InMemoryTodoListRepository();
+  await repo.save(record());
+
+  await repo.delete('list-1');
+  assert.equal(await repo.findById('list-1'), null);
 });

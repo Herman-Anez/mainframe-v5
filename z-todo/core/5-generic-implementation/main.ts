@@ -21,7 +21,6 @@ import { ChangeTodoItemDescriptionPresenter } from "./api/presenters/ChangeTodoI
 import { ChangeTodoItemPriorityPresenter } from "./api/presenters/ChangeTodoItemPriorityPresenter";
 import { DeleteTodoListPresenter } from "./api/presenters/DeleteTodoListPresenter";
 import { ListTodoListsPresenter } from "./api/presenters/ListTodoListsPresenter";
-import { TodoListId } from "../1-domain/value-objects/TodoListId";
 
 // Infraestructura
 const repository = new InMemoryTodoListRepository();
@@ -80,9 +79,9 @@ async function run(): Promise<void> {
     await controller.addItem(listId, { title: 'Comprar leche', description: '2 litros', priority: 'HIGH' }, new AddTodoItemPresenter());
     await controller.addItem(listId, { title: 'Comprar pan', description: '', priority: 'LOW' }, new AddTodoItemPresenter());
 
-    const listAfterAdd = await repository.findById(TodoListId.from(listId));
-    const itemId = listAfterAdd?.items[0]?.id.value;
-    const secondItemId = listAfterAdd?.items[1]?.id.value;
+    const listAfterAdd = await repository.findById(listId);
+    const itemId = listAfterAdd?.items[0]?.id;
+    const secondItemId = listAfterAdd?.items[1]?.id;
 
     if (itemId) {
         await controller.completeItem({ listId, itemId }, new CompleteTodoItemPresenter());

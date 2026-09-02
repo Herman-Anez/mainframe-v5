@@ -1,32 +1,29 @@
-import { TodoList } from '../../1-domain/entities/TodoList';
-import { TodoListId } from '../../1-domain/value-objects/TodoListId';
 import { TodoListRepositoryPort } from '../../2-application/ports/out/TodoListRepositoryPort';
-import { TodoListRecord } from './TodoListRecord';
-import { TodoListMapper } from './TodoListMapper';
+import { TodoListRecord } from '../../2-application/shared/TodoListRecord';
 
 /**
- * Guarda `TodoListRecord` (datos planos), NO el agregado vivo. `save` toma una
- * foto con el mapper; `findById`/`findAll` reconstruyen un agregado nuevo. Así
- * el store queda aislado de lo que el resto del código haga con sus objetos,
- * igual que una base de datos real.
+ * Almacén en memoria de `TodoListRecord` (datos planos). No importa nada de
+ * `1-domain`: no sabe qué es un agregado, solo guarda y devuelve records.
+ * `structuredClone` en save/read aísla el store de cualquier referencia que
+ * tenga quien lo usa — igual que una base de datos real.
  */
 export class InMemoryTodoListRepository implements TodoListRepositoryPort {
     private readonly store = new Map<string, TodoListRecord>();
 
-    async save(todoList: TodoList): Promise<void> {
-        this.store.set(todoList.id.value, TodoListMapper.toRecord(todoList));
+    async save(record: TodoListRecord): Promise<void> {
+        this.store.set(record.id, structuredClone(record));
     }
 
-    async findById(id: TodoListId): Promise<TodoList | null> {
-        const record = this.store.get(id.value);
-        return record ? TodoListMapper.toDomain(record) : null;
+    async findById(id: string): Promise<TodoListRecord | null> {
+        const record = this.store.get(id);
+        return record ? structuredClone(record) : null;
     }
 
-    async findAll(): Promise<TodoList[]> {
-        return Array.from(this.store.values(), (record) => TodoListMapper.toDomain(record));
+    async findAll(): Promise<TodoListRecord[]> {
+        return Array.from(this.store.values(), (record) => structuredClone(record));
     }
 
-    async delete(id: TodoListId): Promise<void> {
-        this.store.delete(id.value);
+    async delete(id: string): Promise<void> {
+        this.store.delete(id);
     }
 }
