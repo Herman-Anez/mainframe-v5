@@ -5,6 +5,7 @@ import { ListTodoListsOutput } from './ListTodoListsOutput';
 import { TodoList } from '../../../../1-domain/entities/TodoList';
 import { InMemoryTodoListRepository } from '../../../../4-infrastructure/persistence/InMemoryTodoListRepository';
 import { capture } from '../../../shared/testing/capturePresenter';
+import { TodoListMapper } from '../../../shared/TodoListMapper';
 
 test('ListTodoListsInteractor devuelve un array vacío si no hay listas', async () => {
   const repository = new InMemoryTodoListRepository();
@@ -23,12 +24,10 @@ test('ListTodoListsInteractor devuelve todas las listas con su completionPercent
   const listA = TodoList.create('Compras');
   const item = listA.addItem('Comprar leche');
   listA.completeItem(item.id.value);
-  listA.clearEvents();
-  await repository.save(listA);
+  await repository.save(TodoListMapper.toRecord(listA));
 
   const listB = TodoList.create('Pendientes');
-  listB.clearEvents();
-  await repository.save(listB);
+  await repository.save(TodoListMapper.toRecord(listB));
 
   const interactor = new ListTodoListsInteractor(repository);
   const { presenter, state } = capture<ListTodoListsOutput>();

@@ -29,7 +29,7 @@ test('CreateTodoListInteractor crea la lista, la persiste y publica TodoListCrea
 
   const all = await repository.findAll();
   assert.equal(all.length, 1);
-  assert.equal(all[0].id.value, state.success?.id);
+  assert.equal(all[0].id, state.success?.id);
 });
 
 test('CreateTodoListInteractor reporta error de dominio si el nombre es muy corto y no persiste nada', async () => {

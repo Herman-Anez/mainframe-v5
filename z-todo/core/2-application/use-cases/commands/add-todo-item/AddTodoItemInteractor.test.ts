@@ -7,11 +7,11 @@ import { InMemoryTodoListRepository } from '../../../../4-infrastructure/persist
 import { InMemoryEventBus } from '../../../../4-infrastructure/messaging/InMemoryEventBus';
 import { InMemoryUnitOfWork } from '../../../../4-infrastructure/unit-of-work/InMemoryUnitOfWork';
 import { capture } from '../../../shared/testing/capturePresenter';
+import { TodoListMapper } from '../../../shared/TodoListMapper';
 
 async function seedList(repository: InMemoryTodoListRepository, name = 'Compras') {
   const list = TodoList.create(name);
-  list.clearEvents();
-  await repository.save(list);
+  await repository.save(TodoListMapper.toRecord(list));
   return list;
 }
 
@@ -36,10 +36,10 @@ test('AddTodoItemInteractor agrega el item y publica TodoItemAdded', async () =>
   assert.equal(state.error, undefined);
   assert.equal(publishedEventName, 'TodoItemAdded');
 
-  const saved = await repository.findById(list.id);
+  const saved = await repository.findById(list.id.value);
   assert.equal(saved?.items.length, 1);
   assert.equal(saved?.items[0].title, 'Comprar leche');
-  assert.equal(state.success?.itemId, saved?.items[0].id.value);
+  assert.equal(state.success?.itemId, saved?.items[0].id);
 });
 
 test('AddTodoItemInteractor reporta TodoListNotFoundException si la lista no existe', async () => {

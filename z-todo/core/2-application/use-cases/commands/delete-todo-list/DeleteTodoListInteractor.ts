@@ -18,19 +18,19 @@ export class DeleteTodoListInteractor implements DeleteTodoListUseCase {
   async execute(input: DeleteTodoListInput, output: OutputBoundary<void>): Promise<void> {
     try {
       const id = TodoListId.from(input.listId);
-      const list = await this.repository.findById(id);
-      if (!list) {
+      const record = await this.repository.findById(id.value);
+      if (!record) {
         throw new TodoListNotFoundException(input.listId);
       }
       await this.unitOfWork.begin();
       try {
-        await this.repository.delete(id);
+        await this.repository.delete(id.value);
         await this.unitOfWork.commit();
       } catch (error) {
         await this.unitOfWork.rollback();
         throw error;
       }
-      await this.eventBus.publish([new TodoListDeleted(list.id.value, list.name)]);
+      await this.eventBus.publish([new TodoListDeleted(record.id, record.name)]);
 
       output.presentSuccess();
     } catch (error) {

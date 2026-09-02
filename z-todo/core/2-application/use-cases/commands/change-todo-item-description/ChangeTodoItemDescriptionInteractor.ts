@@ -9,6 +9,7 @@ import { UnitOfWorkPort } from '../../../ports/out/UnitOfWorkPort';
 import { TodoListId } from '../../../../1-domain/value-objects/TodoListId';
 import { TodoListNotFoundException } from '../../../../1-domain/exceptions/TodoListNotFoundException';
 import { persistAndPublish } from '../../../shared/persistAndPublish';
+import { TodoListMapper } from '../../../shared/TodoListMapper';
 
 export class ChangeTodoItemDescriptionInteractor implements ChangeTodoItemDescriptionUseCase {
   constructor(
@@ -19,10 +20,12 @@ export class ChangeTodoItemDescriptionInteractor implements ChangeTodoItemDescri
 
   async execute(input: ChangeTodoItemDescriptionInput, output: OutputBoundary<ChangeTodoItemDescriptionOutput>): Promise<void> {
     try {
-      const list = await this.repository.findById(TodoListId.from(input.listId));
-      if (!list) {
+      const id = TodoListId.from(input.listId);
+      const record = await this.repository.findById(id.value);
+      if (!record) {
         throw new TodoListNotFoundException(input.listId);
       }
+      const list = TodoListMapper.toDomain(record);
       const item = list.changeItemDescription(input.itemId, input.newDescription);
       await persistAndPublish(list, this.repository, this.eventBus, this.unitOfWork);
 

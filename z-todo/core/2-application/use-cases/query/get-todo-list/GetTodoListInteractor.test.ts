@@ -5,6 +5,7 @@ import { GetTodoListOutput } from './GetTodoListOutput';
 import { TodoList } from '../../../../1-domain/entities/TodoList';
 import { InMemoryTodoListRepository } from '../../../../4-infrastructure/persistence/InMemoryTodoListRepository';
 import { capture } from '../../../shared/testing/capturePresenter';
+import { TodoListMapper } from '../../../shared/TodoListMapper';
 
 test('GetTodoListInteractor devuelve la lista con completionPercentage e isFullyCompleted', async () => {
   const repository = new InMemoryTodoListRepository();
@@ -12,8 +13,7 @@ test('GetTodoListInteractor devuelve la lista con completionPercentage e isFully
   const first = list.addItem('Comprar leche');
   list.addItem('Comprar pan');
   list.completeItem(first.id.value);
-  list.clearEvents();
-  await repository.save(list);
+  await repository.save(TodoListMapper.toRecord(list));
 
   const interactor = new GetTodoListInteractor(repository);
   const { presenter, state } = capture<GetTodoListOutput>();

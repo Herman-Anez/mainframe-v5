@@ -7,12 +7,12 @@ import { InMemoryTodoListRepository } from '../../../../4-infrastructure/persist
 import { InMemoryEventBus } from '../../../../4-infrastructure/messaging/InMemoryEventBus';
 import { InMemoryUnitOfWork } from '../../../../4-infrastructure/unit-of-work/InMemoryUnitOfWork';
 import { capture } from '../../../shared/testing/capturePresenter';
+import { TodoListMapper } from '../../../shared/TodoListMapper';
 
 async function seedListWithItem(repository: InMemoryTodoListRepository) {
   const list = TodoList.create('Compras');
   const item = list.addItem('Comprar leche');
-  list.clearEvents();
-  await repository.save(list);
+  await repository.save(TodoListMapper.toRecord(list));
   return { list, itemId: item.id.value };
 }
 
@@ -35,7 +35,7 @@ test('ChangeTodoItemDescriptionInteractor cambia la descripción y publica TodoI
   assert.equal(state.success?.item.description, '2 litros');
   assert.equal(publishedEventName, 'TodoItemDescriptionChanged');
 
-  const saved = await repository.findById(list.id);
+  const saved = await repository.findById(list.id.value);
   assert.equal(saved?.items[0].description, '2 litros');
 });
 

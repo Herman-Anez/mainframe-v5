@@ -3,6 +3,7 @@ import { GetTodoListInput } from './GetTodoListInput';
 import { GetTodoListOutput } from './GetTodoListOutput';
 import { OutputBoundary } from '../../../shared/OutputBoundary';
 import { toTodoItemView } from '../../../shared/TodoItemView';
+import { TodoListMapper } from '../../../shared/TodoListMapper';
 import { TodoListRepositoryPort } from '../../../ports/out/TodoListRepositoryPort';
 import { TodoListId } from '../../../../1-domain/value-objects/TodoListId';
 import { TodoListNotFoundException } from '../../../../1-domain/exceptions/TodoListNotFoundException';
@@ -13,10 +14,12 @@ export class GetTodoListInteractor implements GetTodoListUseCase {
 
     async execute(input: GetTodoListInput, output: OutputBoundary<GetTodoListOutput>): Promise<void> {
         try {
-            const list = await this.repository.findById(TodoListId.from(input.listId));
-            if (!list) {
+            const id = TodoListId.from(input.listId);
+            const record = await this.repository.findById(id.value);
+            if (!record) {
                 throw new TodoListNotFoundException(input.listId);
             }
+            const list = TodoListMapper.toDomain(record);
 
             output.presentSuccess({
                 id: list.id.value,

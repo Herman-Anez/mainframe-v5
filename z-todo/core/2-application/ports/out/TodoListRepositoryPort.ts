@@ -1,9 +1,14 @@
-import { TodoList } from '../../../1-domain/entities/TodoList';
-import { TodoListId } from '../../../1-domain/value-objects/TodoListId';
+import { TodoListRecord } from '../../shared/TodoListRecord';
 
+/**
+ * El repositorio es un almacén de `TodoListRecord` (datos planos), no una
+ * colección de agregados. La conversión record↔dominio la hace la capa de
+ * aplicación (`TodoListMapper`), no la implementación de persistencia — así
+ * `4-infrastructure/persistence/` no importa `1-domain` en absoluto.
+ */
 export interface TodoListRepositoryPort {
-  save(todoList: TodoList): Promise<void>;
-  findById(id: TodoListId): Promise<TodoList | null>;
-  findAll(): Promise<TodoList[]>;
-  delete(id: TodoListId): Promise<void>;
+  save(record: TodoListRecord): Promise<void>;
+  findById(id: string): Promise<TodoListRecord | null>;
+  findAll(): Promise<TodoListRecord[]>;
+  delete(id: string): Promise<void>;
 }

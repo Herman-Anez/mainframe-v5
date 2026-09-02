@@ -6,6 +6,7 @@ import { InMemoryTodoListRepository } from '../../../../4-infrastructure/persist
 import { InMemoryEventBus } from '../../../../4-infrastructure/messaging/InMemoryEventBus';
 import { InMemoryUnitOfWork } from '../../../../4-infrastructure/unit-of-work/InMemoryUnitOfWork';
 import { capture } from '../../../shared/testing/capturePresenter';
+import { TodoListMapper } from '../../../shared/TodoListMapper';
 
 test('DeleteTodoListInteractor borra la lista y publica TodoListDeleted', async () => {
   const repository = new InMemoryTodoListRepository();
@@ -14,8 +15,7 @@ test('DeleteTodoListInteractor borra la lista y publica TodoListDeleted', async 
   const interactor = new DeleteTodoListInteractor(repository, eventBus, unitOfWork);
 
   const list = TodoList.create('Compras');
-  list.clearEvents();
-  await repository.save(list);
+  await repository.save(TodoListMapper.toRecord(list));
 
   let publishedEventName: string | undefined;
   eventBus.subscribe('TodoListDeleted', (event) => {
@@ -28,7 +28,7 @@ test('DeleteTodoListInteractor borra la lista y publica TodoListDeleted', async 
   assert.equal(state.error, undefined);
   assert.equal(state.settled, 'success');
   assert.equal(publishedEventName, 'TodoListDeleted');
-  assert.equal(await repository.findById(list.id), null);
+  assert.equal(await repository.findById(list.id.value), null);
 });
 
 test('DeleteTodoListInteractor reporta TodoListNotFoundException si la lista no existe', async () => {
